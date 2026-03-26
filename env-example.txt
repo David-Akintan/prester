@@ -1,0 +1,13 @@
+# Environment Variables Example
+# Copy this file to .env.local and fill in your actual values
+
+# Contract addresses (deployed on Initia testnet)
+NEXT_PUBLIC_ESCROW_ADDRESS=0x1234567890123456789012345678901234567890
+NEXT_PUBLIC_REPUTATION_ADDRESS=0x1234567890123456789012345678901234567890
+
+# Initia chain configuration
+NEXT_PUBLIC_INITIA_CHAIN_ID=interwoven-1
+NEXT_PUBLIC_INITIA_EVM_RPC=https://json-rpc.testnet.initia.xyz
+
+# IPFS gateway
+NEXT_PUBLIC_IPFS_GATEWAY=https://ipfs.io/ipfs/
