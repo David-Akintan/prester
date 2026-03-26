@@ -43,12 +43,12 @@ export function BidList({
       // 2. Off-chain: update bid + job status in backend DB
       await bidsApi.accept(jobId, bid.id);
 
-      setSuccessMsg(`Bid accepted! ${bid.username ?? shortenAddress(bid.freelancer_address)} is now assigned.`);
+      setSuccessMsg(
+        `Bid accepted! ${bid.username ?? shortenAddress(bid.freelancer_address)} is now assigned.`,
+      );
       await onRefresh();
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : parseContractError(err)
-      );
+      setError(err instanceof ApiError ? err.message : parseContractError(err));
     } finally {
       setAcceptingId(null);
     }
@@ -93,7 +93,8 @@ export function BidList({
               "rounded-xl border bg-white transition",
               bid.status === "accepted" && "border-green-300 bg-green-50",
               bid.status === "rejected" && "border-gray-200 opacity-60",
-              bid.status === "pending"  && "border-gray-200 hover:border-initia-200"
+              bid.status === "pending" &&
+                "border-gray-200 hover:border-initia-200",
             )}
           >
             {/* Bid header */}
@@ -101,7 +102,8 @@ export function BidList({
               <div className="flex items-center gap-3">
                 {/* Avatar */}
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-initia-100 text-sm font-semibold text-initia-700">
-                  {(bid.username ?? bid.freelancer_address)?.[0]?.toUpperCase() ?? "?"}
+                  {(bid.username ??
+                    bid.freelancer_address)?.[0]?.toUpperCase() ?? "?"}
                 </div>
 
                 <div>
@@ -110,7 +112,9 @@ export function BidList({
                   </p>
                   <p className="text-xs text-gray-400">
                     {new Date(bid.created_at).toLocaleDateString("en-US", {
-                      month: "short", day: "numeric", year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
                     })}
                     {bid.proposed_timeline && ` · ${bid.proposed_timeline}`}
                   </p>
@@ -143,7 +147,7 @@ export function BidList({
                   <button
                     onClick={() => handleAccept(bid)}
                     disabled={!!acceptingId}
-                    className="rounded-lg bg-initia-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-initia-700 disabled:opacity-50"
+                    className="rounded-lg bg-initia-600 px-3.5 py-1.5 text-xs font-semibold text-gray-500 cursor-pointer transition hover:bg-initia-700 disabled:opacity-50"
                   >
                     {isAccepting ? "Accepting…" : "Accept Bid"}
                   </button>

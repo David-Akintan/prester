@@ -11,7 +11,7 @@ interface UseMyJobsResult {
   refresh: () => Promise<void>;
 }
 
-export function useMyJobs(address: string | null): UseMyJobsResult {
+export function useJob(address: string | null): UseMyJobsResult {
   const [postedJobs, setPostedJobs] = useState<JobRecord[]>([]);
   const [activeBids, setActiveBids] = useState<JobRecord[]>([]);
   const [loading, setLoading] = useState(false);

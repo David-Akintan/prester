@@ -1,20 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { bidsApi, ApiError } from "@/lib/api";
+import { bidsApi, ApiError, type BidRecord } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 interface BidModalProps {
   jobId: string;
+  existingBid?: BidRecord | null;
   onSuccess: () => void;
   onClose: () => void;
 }
 
-export function BidModal({ jobId, onSuccess, onClose }: BidModalProps) {
-  const [coverLetter, setCoverLetter] = useState("");
-  const [timeline, setTimeline] = useState("");
+export function BidModal({
+  jobId,
+  existingBid,
+  onSuccess,
+  onClose,
+}: BidModalProps) {
+  const isEditing = !!existingBid;
+  const [coverLetter, setCoverLetter] = useState(
+    existingBid?.cover_letter || "",
+  );
+  const [timeline, setTimeline] = useState(
+    existingBid?.proposed_timeline || "",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warningAcknowledged, setWarningAcknowledged] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,13 +35,25 @@ export function BidModal({ jobId, onSuccess, onClose }: BidModalProps) {
       return;
     }
 
+    if (isEditing && !warningAcknowledged) {
+      setError("Please acknowledge the warning before submitting your edit.");
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     try {
-      await bidsApi.create(jobId, {
-        cover_letter: coverLetter.trim(),
-        proposed_timeline: timeline.trim() || undefined,
-      });
+      if (isEditing && existingBid) {
+        await bidsApi.update(jobId, existingBid.id, {
+          cover_letter: coverLetter.trim(),
+          proposed_timeline: timeline.trim() || undefined,
+        });
+      } else {
+        await bidsApi.create(jobId, {
+          cover_letter: coverLetter.trim(),
+          proposed_timeline: timeline.trim() || undefined,
+        });
+      }
       onSuccess();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to submit bid.");
@@ -43,7 +67,7 @@ export function BidModal({ jobId, onSuccess, onClose }: BidModalProps) {
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h2 className="text-base font-semibold text-gray-900">
-            Submit a Bid
+            {isEditing ? "Edit Your Bid" : "Submit a Bid"}
           </h2>
           <button
             onClick={onClose}
@@ -52,6 +76,29 @@ export function BidModal({ jobId, onSuccess, onClose }: BidModalProps) {
             ✕
           </button>
         </div>
+
+        {/* Edit warning — shown only when editing */}
+        {isEditing && (
+          <div className="border-b border-black bg-neutral-50 px-6 py-4">
+            <p className="text-xs font-medium text-black mb-3">
+              ⚠️ <strong>One-time edit.</strong> You can only update your bid
+              once. After submitting this edit, your bid will be locked and
+              cannot be changed again. Make sure everything is correct before
+              proceeding.
+            </p>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={warningAcknowledged}
+                onChange={(e) => setWarningAcknowledged(e.target.checked)}
+                className="h-4 w-4 border-black"
+              />
+              <span className="text-xs font-medium text-black uppercase tracking-wide">
+                I understand this is my one and only edit
+              </span>
+            </label>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4 p-6">
           <div>
@@ -105,10 +152,14 @@ export function BidModal({ jobId, onSuccess, onClose }: BidModalProps) {
             </button>
             <button
               type="submit"
-              disabled={submitting}
-              className="rounded-lg bg-initia-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-initia-700 disabled:opacity-60"
+              disabled={submitting || (isEditing && !warningAcknowledged)}
+              className="border border-black bg-black px-5 py-2 text-xs font-medium uppercase tracking-wide text-white transition hover:bg-white hover:text-black disabled:opacity-50"
             >
-              {submitting ? "Submitting…" : "Submit Bid"}
+              {submitting
+                ? "Submitting…"
+                : isEditing
+                  ? "Update Bid"
+                  : "Submit Bid"}
             </button>
           </div>
         </form>

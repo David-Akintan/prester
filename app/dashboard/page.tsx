@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useWallet } from "@/app/components/wallet/WalletContext";
-import { useMyJobs } from "@/hooks/useMyJobs";
+import { useJob } from "@/hooks/useMyJobs";
 import { JobCard } from "@/app/jobs/JobCard";
 import { shortenAddress, formatEth } from "@/lib/utils";
 import { useState } from "react";
@@ -12,7 +12,7 @@ type Tab = "posted" | "bids";
 export default function DashboardPage() {
   const { address, isConnected, isAuthenticated, connect, isConnecting } =
     useWallet();
-  const { postedJobs, activeBids, loading, error } = useMyJobs(address);
+  const { postedJobs, activeBids, loading, error } = useJob(address);
   const [tab, setTab] = useState<Tab>("posted");
 
   // ── Not connected ─────────────────────────────────────────

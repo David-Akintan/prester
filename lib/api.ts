@@ -40,6 +40,8 @@ export function getSavedAddress(): string | null {
   return localStorage.getItem("fl3_address");
 }
 
+// ─── Core fetch wrapper ───────────────────────────────────────
+
 interface ApiOptions extends RequestInit {
   auth?: boolean;
 }
@@ -92,10 +94,12 @@ async function apiFetch<T>(path: string, options: ApiOptions = {}): Promise<T> {
 // ─── Auth ─────────────────────────────────────────────────────
 
 export const authApi = {
+  /** get a nonce to sign */
   getNonce(address: string): Promise<{ nonce: string; message: string }> {
     return apiFetch(`/auth/nonce?address=${address}`, { auth: false });
   },
 
+  /** verify signature and get JWT */
   verify(
     address: string,
     signature: string,
@@ -163,6 +167,7 @@ export interface BidRecord {
   avatar_url: string | null;
   cover_letter: string;
   proposed_timeline: string | null;
+  has_been_edited: boolean;
   status: "pending" | "accepted" | "rejected";
   created_at: string;
 }
@@ -237,6 +242,17 @@ export const bidsApi = {
   accept(jobId: string, bidId: string): Promise<{ bid: BidRecord }> {
     return apiFetch(`/jobs/${jobId}/bids/${bidId}/accept`, {
       method: "POST",
+    });
+  },
+
+  update(
+    jobId: string,
+    bidId: string,
+    payload: Partial<CreateBidPayload>,
+  ): Promise<BidRecord> {
+    return apiFetch(`/jobs/${jobId}/bids/${bidId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
     });
   },
 };
