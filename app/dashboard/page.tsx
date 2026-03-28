@@ -78,7 +78,7 @@ export default function DashboardPage() {
         </div>
         <Link
           href="/jobs/new"
-          className="self-start rounded-lg bg-initia-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-initia-700 sm:self-auto"
+          className="self-start rounded-lg bg-initia-600 px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm transition hover:bg-initia-700 sm:self-auto"
         >
           + Post a Job
         </Link>

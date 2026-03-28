@@ -8,6 +8,8 @@ import {
 } from "@/app/components/wallet/WalletContext";
 import { shortenAddress, cn } from "@/lib/utils";
 import { config } from "@/lib/config";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useState } from "react";
 
 // Human-readable label for each step in the connect flow
 const STEP_LABEL: Record<ConnectStep, string> = {
@@ -36,6 +38,11 @@ export default function Navbar() {
     disconnect,
     switchNetwork,
   } = useWallet();
+
+  const { notifications, unread, markAllRead } =
+    useNotifications(isAuthenticated);
+  const [showNotifs, setShowNotifs] = useState(false);
+
   const navLinks = [
     { href: "/jobs", label: "Browse Jobs" },
     { href: "/jobs/new", label: "Post a Job" },
@@ -117,6 +124,93 @@ export default function Navbar() {
                     {shortenAddress(address)}
                   </span>
                 </div>
+
+                {isAuthenticated && (
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        setShowNotifs((v) => !v);
+                        if (unread > 0) markAllRead();
+                      }}
+                      className="relative border border-black bg-white px-3 py-2 text-xs transition hover:bg-black hover:text-white"
+                      aria-label="Notifications"
+                    >
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                        />
+                      </svg>
+                      {unread > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center bg-black text-white text-xs font-bold rounded-full">
+                          {unread > 9 ? "9+" : unread}
+                        </span>
+                      )}
+                    </button>
+
+                    {showNotifs && (
+                      <div className="absolute right-0 top-full mt-2 w-80 border border-black bg-white shadow-xl z-50">
+                        <div className="border-b border-black px-4 py-3 flex items-center justify-between">
+                          <span className="text-xs font-semibold uppercase tracking-widest">
+                            Notifications
+                          </span>
+                          <button
+                            onClick={() => setShowNotifs(false)}
+                            className="text-neutral-400 hover:text-black text-xs"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        <div className="max-h-80 overflow-y-auto divide-y divide-neutral-100">
+                          {notifications.length === 0 ? (
+                            <p className="px-4 py-6 text-xs text-neutral-400 text-center">
+                              No notifications yet.
+                            </p>
+                          ) : (
+                            notifications.map((n) => (
+                              <div
+                                key={n.id}
+                                className={`px-4 py-3 ${!n.read ? "bg-neutral-50" : "bg-white"}`}
+                              >
+                                <div className="flex items-start gap-2">
+                                  <span className="mt-0.5 text-sm">
+                                    {n.type === "funds_received" ? "💸" : "✅"}
+                                  </span>
+                                  <div>
+                                    <p className="text-xs font-semibold text-black">
+                                      {n.title}
+                                    </p>
+                                    <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
+                                      {n.message}
+                                    </p>
+                                    <p className="text-xs text-neutral-300 mt-1">
+                                      {new Date(
+                                        n.created_at,
+                                      ).toLocaleDateString("en-US", {
+                                        month: "short",
+                                        day: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <button
                   onClick={disconnect}

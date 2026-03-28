@@ -48,7 +48,17 @@ export function BidList({
       );
       await onRefresh();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : parseContractError(err));
+      const parsed =
+        err instanceof ApiError ? err.message : parseContractError(err);
+      // Detect the stale-state case specifically and give an actionable message
+      if (parsed.includes("JobAlreadyHasFreelancer")) {
+        setError(
+          "This job already has a freelancer assigned on-chain. Refreshing data…",
+        );
+        await onRefresh(); // pull fresh state so the button disappears
+      } else {
+        setError(parsed);
+      }
     } finally {
       setAcceptingId(null);
     }

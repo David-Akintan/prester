@@ -344,11 +344,26 @@ export function JobDetailSidebar({
           )}
 
           {/* Client — in progress (no actions available) */}
-          {role === "client" && job.status === "in_progress" && (
-            <div className="border border-neutral-200 px-4 py-3 text-center text-xs text-neutral-400">
-              Job in progress — approve milestones below
-            </div>
-          )}
+          {role === "client" &&
+            job.status === "in_progress" &&
+            (() => {
+              const hasSubmitted = job.milestones?.some(
+                (m) => m.status === "submitted",
+              );
+              return (
+                <div
+                  className={`px-4 py-3 text-center text-xs border ${
+                    hasSubmitted
+                      ? "border-black bg-black text-white"
+                      : "border-neutral-200 text-neutral-400"
+                  }`}
+                >
+                  {hasSubmitted
+                    ? "⚡ A milestone is ready to review below"
+                    : "Waiting for freelancer to submit work…"}
+                </div>
+              );
+            })()}
 
           {/* Client — draft (waiting on-chain confirmation) */}
           {/* {role === "client" && job.status === "draft" && (

@@ -75,7 +75,16 @@ async function apiFetch<T>(path: string, options: ApiOptions = {}): Promise<T> {
     headers,
   });
 
+  const contentType = res.headers.get("content-type") ?? "";
+
   if (res.status === 204) return undefined as T;
+  if (!contentType.includes("application/json")) {
+    throw new ApiError(
+      res.status,
+      "INVALID_RESPONSE",
+      `Server returned non-JSON response (HTTP ${res.status}). Is the backend running?`,
+    );
+  }
 
   const data = await res.json();
 
