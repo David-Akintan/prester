@@ -22,6 +22,10 @@ export const SUPPORTED_CHAINS: Record<
     rpcUrl:
       process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ?? "https://rpc.sepolia.org",
   },
+  "2594729740794688": {
+    name: "MiniEVM Testnet",
+    rpcUrl: "https://jsonrpc-evm-1.anvil.asia-southeast.initia.xyz",
+  },
 };
 
 const chainId = process.env.NEXT_PUBLIC_CHAIN_ID ?? "11155111";

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useWallet } from "@/app/components/wallet/WalletContext";
+import { useWallet } from "@/app/components/wallet/WalletContext1.0";
 import { createJob } from "@/lib/contracts";
 import { jobsApi, ipfsApi } from "@/lib/api";
 import {

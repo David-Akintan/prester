@@ -13,15 +13,21 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+    "@initia/icons-react": "^2.1.0",
+    "@initia/interwovenkit-react": "^2.5.1",
     "@initia/react-wallet-widget": "^1.9.8",
     "@supabase/supabase-js": "^2.100.0",
     "@tailwindcss/postcss": "^4",
+    "@tanstack/react-query": "5.62.7",
+    "@wagmi/core": "^3.4.1",
     "clsx": "^2.1.0",
     "ethers": "^6.0.0",
     "next": "16.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "tailwind-merge": "^2.0.0"
+    "tailwind-merge": "^2.0.0",
+    "viem": "^2.23.2",
+    "wagmi": "2.17.2"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.0.0",

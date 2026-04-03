@@ -36,6 +36,7 @@ export function JobDetailSidebar({
   const [editingBid, setEditingBid] = useState<BidRecord | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
@@ -74,13 +75,7 @@ export function JobDetailSidebar({
   );
 
   async function handleDelete() {
-    const label =
-      job.status === "draft"
-        ? "Delete this draft job?"
-        : "Cancel this job and refund your ETH? This cannot be undone.";
-
-    if (!confirm(label)) return;
-
+    // Remove the confirm() call since we're using the modal
     setCancelling(true);
     setActionError(null);
 
@@ -109,8 +104,7 @@ export function JobDetailSidebar({
   }
 
   async function handleArchive() {
-    if (!confirm("Archive this job? It will be hidden from your dashboard."))
-      return;
+    // Remove the confirm() call and use modal state instead
     setCancelling(true);
     setActionError(null);
     try {
@@ -255,14 +249,38 @@ export function JobDetailSidebar({
           )}
 
           {/* Visitor — job not open */}
-          {role === "visitor" &&
-            isAuthenticated &&
-            job.status !== "open" &&
-            !myBid && (
-              <div className="rounded-lg bg-gray-50 px-4 py-3 text-center text-sm text-gray-500">
-                This job is no longer accepting bids.
-              </div>
-            )}
+          {role === "visitor" && isAuthenticated && job.status !== "open" && (
+            <div className="rounded-lg bg-gray-50 px-4 py-3 text-center text-sm text-gray-500">
+              {(() => {
+                const acceptedBid = job.bids?.find(
+                  (b) => b.status === "accepted",
+                );
+                if (acceptedBid) {
+                  return (
+                    <>
+                      <div className="mb-2">
+                        ✓ This job has been assigned to{" "}
+                        <span className="font-medium text-gray-700">
+                          {acceptedBid.username ??
+                            shortenAddress(acceptedBid.freelancer_address)}
+                        </span>
+                      </div>
+                      <div className="text-xs">Work is now in progress.</div>
+                    </>
+                  );
+                }
+
+                switch (job.status) {
+                  case "in_progress":
+                    return "A freelancer has been assigned to this job.";
+                  case "completed":
+                    return "This job has been completed.";
+                  default:
+                    return "This job is no longer accepting bids.";
+                }
+              })()}
+            </div>
+          )}
 
           {/* Freelancer — assigned */}
           {role === "freelancer" && (
@@ -281,133 +299,501 @@ export function JobDetailSidebar({
 
           {/* Client — open, can cancel (with fee disclosure) */}
           {role === "client" && job.status === "open" && job.chain_job_id && (
-            <>
-              {!showCancelConfirm ? (
-                <button
-                  onClick={() => setShowCancelConfirm(true)}
-                  className="w-full border border-black py-2.5 text-xs font-medium uppercase tracking-widest text-black transition hover:bg-black hover:text-white"
-                >
-                  Cancel Job
-                </button>
-              ) : (
-                <div className="border border-black p-4 space-y-3">
-                  <p className="text-xs font-bold uppercase tracking-wide text-black">
-                    Confirm Cancellation
-                  </p>
-                  {/* Fee transparency */}
-                  <div className="bg-neutral-50 border border-neutral-200 p-3 space-y-1.5 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-neutral-500">Total locked</span>
-                      <span className="font-medium text-black">
-                        {totalEth} ETH
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-neutral-500">
-                        Cancellation fee (5%)
-                      </span>
-                      <span className="font-medium text-red-600">
-                        − {cancellationFeeEth} ETH
-                      </span>
-                    </div>
-                    <div className="flex justify-between border-t border-neutral-200 pt-1.5">
-                      <span className="font-medium text-black">
-                        You receive
-                      </span>
-                      <span className="font-bold text-black">
-                        {refundAfterFeeEth} ETH
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-xs text-neutral-400">
-                    The 5% fee is non-refundable. Funds are returned directly to
-                    your wallet by the smart contract.
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setShowCancelConfirm(false)}
-                      className="flex-1 border border-neutral-200 py-2 text-xs uppercase tracking-wide text-neutral-500 hover:border-black hover:text-black"
-                    >
-                      Go Back
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      disabled={cancelling}
-                      className="flex-1 border border-black bg-black py-2 text-xs font-medium uppercase tracking-wide text-white transition hover:bg-white hover:text-black disabled:opacity-50"
-                    >
-                      {cancelling ? "Processing…" : "Confirm Cancel"}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
+            <button
+              onClick={() => setShowCancelConfirm(true)}
+              className="w-full border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-all hover:border-black hover:bg-black hover:text-white rounded-lg"
+            >
+              Cancel Job
+            </button>
           )}
 
-          {/* Client — in progress (no actions available) */}
-          {role === "client" &&
-            job.status === "in_progress" &&
-            (() => {
-              const hasSubmitted = job.milestones?.some(
-                (m) => m.status === "submitted",
-              );
-              return (
-                <div
-                  className={`px-4 py-3 text-center text-xs border ${
-                    hasSubmitted
-                      ? "border-black bg-black text-white"
-                      : "border-neutral-200 text-neutral-400"
-                  }`}
-                >
-                  {hasSubmitted
-                    ? "⚡ A milestone is ready to review below"
-                    : "Waiting for freelancer to submit work…"}
-                </div>
-              );
-            })()}
+          {/* Client — completed, can archive */}
+          {role === "client" && job.status === "completed" && (
+            <button
+              onClick={() => setShowArchiveConfirm(true)}
+              className="w-full border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-all hover:border-black hover:bg-black hover:text-white rounded-lg"
+            >
+              Archive Job
+            </button>
+          )}
+        </div>
 
-          {/* Client — draft (waiting on-chain confirmation) */}
-          {/* {role === "client" && job.status === "draft" && (
+        {/* Error / success feedback */}
+        {actionError && (
+          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="flex items-center gap-2">
+              <svg
+                className="h-4 w-4 text-red-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>{actionError}</span>
+            </div>
+          </div>
+        )}
+        {actionSuccess && (
+          <div className="mt-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            <div className="flex items-center gap-2">
+              <svg
+                className="h-4 w-4 text-green-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>{actionSuccess}</span>
+            </div>
+          </div>
+        )}
+      </aside>
+
+      {/* Cancel Job Modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
+            onClick={() => setShowCancelConfirm(false)}
+          />
+
+          {/* Modal Content */}
+          <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl animate-scale-in">
+            {/* Modal Header */}
+            <div className="border-b border-gray-300 bg-white px-6 py-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-black">Cancel Job</h3>
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 text-gray-400 transition-all hover:border-black hover:bg-black hover:text-white"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-6 py-4">
+              <p className="text-sm text-gray-600 mb-4">
+                Are you sure you want to cancel this job? This action cannot be
+                undone and will refund your ETH with a cancellation fee.
+              </p>
+
+              {/* Fee transparency */}
+              <div className="rounded-lg border border-gray-300 bg-gray-50 p-4 space-y-3">
+                <h4 className="text-sm font-semibold text-black">
+                  Refund Summary
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total locked</span>
+                    <span className="font-medium text-black">
+                      {totalEth} ETH
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Cancellation fee (5%)</span>
+                    <span className="font-medium text-red-600">
+                      − {cancellationFeeEth} ETH
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-gray-300 pt-2">
+                    <span className="font-semibold text-black">
+                      You receive
+                    </span>
+                    <span className="font-bold text-black">
+                      {refundAfterFeeEth} ETH
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-3">
+                The 5% fee is non-refundable. Funds are returned directly to
+                your wallet by the smart contract.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-300 bg-white px-6 py-4">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-all hover:border-black hover:bg-gray-100"
+                >
+                  Go Back
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={cancelling}
+                  className="flex-1 rounded-lg border border-black bg-black px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {cancelling ? "Processing…" : "Confirm Cancel"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Archive Job Modal */}
+      {showArchiveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
+            onClick={() => setShowArchiveConfirm(false)}
+          />
+
+          {/* Modal Content */}
+          <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl animate-scale-in">
+            {/* Modal Header */}
+            <div className="border-b border-gray-300 bg-white px-6 py-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-black">
+                  Archive Job
+                </h3>
+                <button
+                  onClick={() => setShowArchiveConfirm(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 text-gray-400 transition-all hover:border-black hover:bg-black hover:text-white"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-6 py-4">
+              <p className="text-sm text-gray-600">
+                Archive this job? It will be hidden from your dashboard but can
+                be restored later if needed.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-300 bg-white px-6 py-4">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowArchiveConfirm(false)}
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-all hover:border-black hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleArchive}
+                  disabled={cancelling}
+                  className="flex-1 rounded-lg border border-black bg-black px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {cancelling ? "Archiving…" : "Archive Job"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Client — in progress (no actions available) */}
+      {role === "client" &&
+        job.status === "in_progress" &&
+        (() => {
+          const hasSubmitted = job.milestones?.some(
+            (m) => m.status === "submitted",
+          );
+          return (
+            <div
+              className={`px-4 py-3 text-center text-xs border rounded-lg ${
+                hasSubmitted
+                  ? "border-black bg-black text-white"
+                  : "border-gray-300 text-gray-400"
+              }`}
+            >
+              {hasSubmitted
+                ? "⚡ A milestone is ready to review below"
+                : "Waiting for freelancer to submit work…"}
+            </div>
+          );
+        })()}
+
+      {/* Client — draft (waiting on-chain confirmation) */}
+      {/* {role === "client" && job.status === "draft" && (
             <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-700">
               Waiting for on-chain confirmation…
             </div>
           )} */}
 
-          {/* Client — completed */}
-          {role === "client" && job.status === "completed" && (
-            <div className="border border-black px-4 py-3 text-center text-xs uppercase tracking-wide text-black">
-              ✓ All milestones completed
-            </div>
-          )}
-
-          {/* Error / success feedback */}
-          {actionError && (
-            <p className="mt-3 text-xs text-red-600">{actionError}</p>
-          )}
-          {actionSuccess && (
-            <p className="mt-3 text-xs text-green-700">{actionSuccess}</p>
-          )}
+      {/* Client — completed */}
+      {role === "client" && job.status === "completed" && (
+        <div className="border border-black px-4 py-3 text-center text-xs uppercase tracking-wide text-black rounded-lg">
+          ✓ All milestones completed
         </div>
+      )}
 
-        {/* Client info */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-            Posted by
-          </p>
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-initia-100 text-sm font-semibold text-initia-700">
-              {(job.client_username ?? job.client_address)?.[0]?.toUpperCase()}
+      {/* Error / success feedback */}
+      {actionError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="flex items-center gap-2">
+            <svg
+              className="h-4 w-4 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>{actionError}</span>
+          </div>
+        </div>
+      )}
+      {actionSuccess && (
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          <div className="flex items-center gap-2">
+            <svg
+              className="h-4 w-4 text-green-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>{actionSuccess}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Job Modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
+            onClick={() => setShowCancelConfirm(false)}
+          />
+
+          {/* Modal Content */}
+          <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl animate-scale-in">
+            {/* Modal Header */}
+            <div className="border-b border-gray-300 bg-white px-6 py-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-black">Cancel Job</h3>
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 text-gray-400 transition-all hover:border-black hover:bg-black hover:text-white"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900">
-                {job.client_username ?? shortenAddress(job.client_address)}
+
+            {/* Modal Body */}
+            <div className="px-6 py-4">
+              <p className="text-sm text-gray-600 mb-4">
+                Are you sure you want to cancel this job? This action cannot be
+                undone and will refund your ETH with a cancellation fee.
               </p>
-              <p className="font-mono text-xs text-gray-400">
-                {shortenAddress(job.client_address)}
+
+              {/* Fee transparency */}
+              <div className="rounded-lg border border-gray-300 bg-gray-50 p-4 space-y-3">
+                <h4 className="text-sm font-semibold text-black">
+                  Refund Summary
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Total locked</span>
+                    <span className="font-medium text-black">
+                      {totalEth} ETH
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Cancellation fee (5%)</span>
+                    <span className="font-medium text-red-600">
+                      − {cancellationFeeEth} ETH
+                    </span>
+                  </div>
+                  <div className="flex justify-between border-t border-gray-300 pt-2">
+                    <span className="font-semibold text-black">
+                      You receive
+                    </span>
+                    <span className="font-bold text-black">
+                      {refundAfterFeeEth} ETH
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-3">
+                The 5% fee is non-refundable. Funds are returned directly to
+                your wallet by the smart contract.
               </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-300 bg-white px-6 py-4">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-all hover:border-black hover:bg-gray-100"
+                >
+                  Go Back
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={cancelling}
+                  className="flex-1 rounded-lg border border-black bg-black px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {cancelling ? "Processing…" : "Confirm Cancel"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </aside>
+      )}
+
+      {/* Archive Job Modal */}
+      {showArchiveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
+            onClick={() => setShowArchiveConfirm(false)}
+          />
+
+          {/* Modal Content */}
+          <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl animate-scale-in">
+            {/* Modal Header */}
+            <div className="border-b border-gray-300 bg-white px-6 py-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-black">
+                  Archive Job
+                </h3>
+                <button
+                  onClick={() => setShowArchiveConfirm(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 text-gray-400 transition-all hover:border-black hover:bg-black hover:text-white"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="px-6 py-4">
+              <p className="text-sm text-gray-600">
+                Archive this job? It will be hidden from your dashboard but can
+                be restored later if needed.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-300 bg-white px-6 py-4">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowArchiveConfirm(false)}
+                  className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-all hover:border-black hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleArchive}
+                  disabled={cancelling}
+                  className="flex-1 rounded-lg border border-black bg-black px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {cancelling ? "Archiving…" : "Archive Job"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Client info */}
+      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">
+          Posted by
+        </p>
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-700">
+            {(job.client_username ?? job.client_address)?.[0]?.toUpperCase()}
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-900">
+              {job.client_username ?? shortenAddress(job.client_address)}
+            </p>
+            <p className="font-mono text-xs text-gray-400">
+              {shortenAddress(job.client_address)}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Bid modal */}
       {showBidModal && (

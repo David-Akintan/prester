@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useJob } from "@/hooks/useMyJobs";
 import { jobsApi, type JobRecord } from "@/lib/api";
-import { useWallet } from "@/app/components/wallet/WalletContext";
+import { useWallet } from "@/app/components/wallet/WalletContext1.0";
 import { BidList } from "@/app/jobs/BidList";
 import { BidModal } from "@/app/jobs/BidModal";
 import { StatusBadge } from "@/app/components/ui/StatusBadge";

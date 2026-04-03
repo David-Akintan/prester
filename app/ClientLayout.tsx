@@ -1,6 +1,6 @@
 "use client";
 
-import { WalletProvider } from "@/app/components/wallet/WalletContext";
+import { WalletProvider } from "@/app/components/wallet/WalletContext1.0";
 import Navbar from "@/app/components/layout/Navbar";
 
 // This is the ONLY ClientLayout. It is imported by app/layout.tsx.
@@ -13,7 +13,7 @@ export default function ClientLayout({
   return (
     <WalletProvider>
       <Navbar />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">{children}</main>
+      <main className="container mx-auto py-8 animate-fade-in">{children}</main>
     </WalletProvider>
   );
 }

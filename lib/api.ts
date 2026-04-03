@@ -40,6 +40,54 @@ export function getSavedAddress(): string | null {
   return localStorage.getItem("fl3_address");
 }
 
+// ─── Users (Freelancer Dashboard) ───────────────────────
+
+export interface FreelancerDashboard {
+  completedJobs: number;
+  activeJobs: number;
+  totalEarningsWei: string;
+  totalEarningsETH: string;
+  recentCompletedJobs: Array<{
+    id: string;
+    title: string;
+    total_amount_wei: string;
+    updated_at: string;
+    totalEarningsETH: string;
+  }>;
+}
+
+export interface FreelancerJobListParams {
+  status?: "completed" | "in_progress" | "open";
+  page?: number;
+  limit?: number;
+}
+
+export interface FreelancerJobRecord extends JobRecord {
+  earnedETH: string;
+  totalETH: string;
+  progressPercentage: number;
+}
+
+export const usersApi = {
+  getDashboard(): Promise<FreelancerDashboard> {
+    return apiFetch("/users/me/dashboard");
+  },
+
+  getMyJobs(params: FreelancerJobListParams = {}): Promise<{
+    jobs: FreelancerJobRecord[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const qs = new URLSearchParams(
+      Object.entries(params)
+        .filter(([, v]) => v !== undefined)
+        .map(([k, v]) => [k, String(v)]),
+    ).toString();
+    return apiFetch(`/users/me/jobs${qs ? `?${qs}` : ""}`);
+  },
+};
+
 // ─── Core fetch wrapper ───────────────────────────────────────
 
 interface ApiOptions extends RequestInit {
@@ -156,6 +204,24 @@ export interface JobRecord {
   updated_at: string;
   milestones: MilestoneRecord[];
   bids: BidRecord[];
+  disputes: DisputeRecord[];
+}
+
+export interface DisputeRecord {
+  id: string;
+  job_id: string;
+  milestone_index: number;
+  raised_by: string;
+  reason: string | null;
+  evidence_uris: string[] | null;
+  verdict: "client" | "freelancer" | null;
+  verdict_reason: string | null;
+  verdict_uri: string | null;
+  status: string;
+  confidence: number | null;
+  milestone_description: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MilestoneRecord {

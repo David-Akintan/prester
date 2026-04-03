@@ -26,7 +26,7 @@ export function BidList({
   onRefresh,
 }: BidListProps) {
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedBid, setSelectedBid] = useState<BidRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -47,15 +47,16 @@ export function BidList({
         `Bid accepted! ${bid.username ?? shortenAddress(bid.freelancer_address)} is now assigned.`,
       );
       await onRefresh();
+      setSelectedBid(null); // Close modal after successful acceptance
     } catch (err) {
       const parsed =
         err instanceof ApiError ? err.message : parseContractError(err);
-      // Detect the stale-state case specifically and give an actionable message
+      // Detect stale-state case specifically and give an actionable message
       if (parsed.includes("JobAlreadyHasFreelancer")) {
         setError(
           "This job already has a freelancer assigned on-chain. Refreshing data…",
         );
-        await onRefresh(); // pull fresh state so the button disappears
+        await onRefresh(); // pull fresh state so button disappears
       } else {
         setError(parsed);
       }
@@ -66,123 +67,316 @@ export function BidList({
 
   if (bids.length === 0) {
     return (
-      <div className="rounded-xl border border-gray-200 bg-white py-10 text-center text-sm text-gray-400">
-        No bids yet. Share this job to get proposals.
+      <div className="rounded-xl border border-gray-300 bg-gray-50 py-12 text-center">
+        <div className="mx-auto mb-4 h-12 w-12 rounded-full border-2 border-gray-300 bg-white flex items-center justify-center">
+          <svg
+            className="h-6 w-6 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+        </div>
+        <p className="text-sm text-gray-600 font-medium">No bids yet</p>
+        <p className="text-xs text-gray-500 mt-1">
+          Share this job to get proposals from talented freelancers
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {/* Feedback banners */}
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-      {successMsg && (
-        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          {successMsg}
-        </div>
-      )}
+    <>
+      <div className="space-y-4">
+        {/* Feedback banners */}
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 animate-slide-down">
+            <div className="flex items-start gap-2">
+              <svg
+                className="h-4 w-4 text-red-500 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p>{error}</p>
+            </div>
+          </div>
+        )}
+        {successMsg && (
+          <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 animate-slide-down">
+            <div className="flex items-start gap-2">
+              <svg
+                className="h-4 w-4 text-green-500 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p>{successMsg}</p>
+            </div>
+          </div>
+        )}
 
-      {bids.map((bid) => {
-        const isExpanded = expandedId === bid.id;
-        const isAccepting = acceptingId === bid.id;
-        const canAccept =
-          isClient &&
-          jobStatus === "open" &&
-          bid.status === "pending" &&
-          !!signer &&
-          !!chainJobId;
+        {bids.map((bid, index) => {
+          const isAccepting = acceptingId === bid.id;
+          const canAccept =
+            isClient &&
+            jobStatus === "open" &&
+            bid.status === "pending" &&
+            !!signer &&
+            !!chainJobId;
 
-        return (
-          <div
-            key={bid.id}
-            className={cn(
-              "rounded-xl border bg-white transition",
-              bid.status === "accepted" && "border-green-300 bg-green-50",
-              bid.status === "rejected" && "border-gray-200 opacity-60",
-              bid.status === "pending" &&
-                "border-gray-200 hover:border-initia-200",
-            )}
-          >
-            {/* Bid header */}
-            <div className="flex items-center justify-between gap-3 p-4">
-              <div className="flex items-center gap-3">
-                {/* Avatar */}
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-initia-100 text-sm font-semibold text-initia-700">
-                  {(bid.username ??
-                    bid.freelancer_address)?.[0]?.toUpperCase() ?? "?"}
+          return (
+            <div
+              key={bid.id}
+              className={cn(
+                "group rounded-xl border bg-white transition-all duration-200 hover:shadow-md animate-fade-in-up",
+                bid.status === "accepted" &&
+                  "border-green-500 bg-green-50 shadow-sm",
+                bid.status === "rejected" && "border-gray-200 opacity-60",
+                bid.status === "pending" &&
+                  "border-gray-300 hover:border-black cursor-pointer",
+              )}
+              style={{ animationDelay: `${index * 100}ms` }}
+              onClick={() => bid.status === "pending" && setSelectedBid(bid)}
+            >
+              {/* Bid header */}
+              <div className="flex items-center justify-between gap-4 p-6">
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  {/* Avatar */}
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-gray-300 bg-gray-50 group-hover:border-black transition-colors">
+                    <span className="text-sm font-bold text-gray-700 group-hover:text-black">
+                      {(bid.username ??
+                        bid.freelancer_address)?.[0]?.toUpperCase() ?? "?"}
+                    </span>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-base font-semibold text-gray-900 truncate">
+                      {bid.username ?? shortenAddress(bid.freelancer_address)}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {new Date(bid.created_at).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                      {bid.proposed_timeline && (
+                        <span className="ml-2">• {bid.proposed_timeline}</span>
+                      )}
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <p className="text-sm font-medium text-gray-900">
-                    {bid.username ?? shortenAddress(bid.freelancer_address)}
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {new Date(bid.created_at).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                    {bid.proposed_timeline && ` · ${bid.proposed_timeline}`}
-                  </p>
+                <div className="flex items-center gap-3 shrink-0">
+                  {/* Status pill */}
+                  {bid.status === "accepted" && (
+                    <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 border border-green-200">
+                      ✓ Accepted
+                    </span>
+                  )}
+                  {bid.status === "rejected" && (
+                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 border border-gray-200">
+                      Rejected
+                    </span>
+                  )}
+
+                  {/* View bid button */}
+                  {bid.status === "pending" && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedBid(bid);
+                      }}
+                      className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-xs font-semibold text-gray-700 transition-all hover:border-black hover:bg-black hover:text-white"
+                    >
+                      View Bid
+                    </button>
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                {/* Status pill */}
-                {bid.status === "accepted" && (
-                  <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                    Accepted
-                  </span>
-                )}
-                {bid.status === "rejected" && (
-                  <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
-                    Rejected
-                  </span>
-                )}
+              {/* Bid preview snippet */}
+              {bid.status === "pending" && (
+                <div className="px-6 pb-4">
+                  <p className="text-sm text-gray-600 line-clamp-2">
+                    {bid.cover_letter}
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })}
 
-                {/* Expand/collapse cover letter */}
+        {/* Helpful note for client if no chain job id yet */}
+        {isClient && !chainJobId && jobStatus === "open" && (
+          <div className="rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <svg
+                className="h-4 w-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p className="text-xs text-gray-500">
+                Waiting for on-chain confirmation before bids can be accepted
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Bid Modal */}
+      {selectedBid && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
+            onClick={() => setSelectedBid(null)}
+          />
+
+          {/* Modal Content */}
+          <div className="relative z-10 w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl bg-white shadow-2xl animate-scale-in">
+            {/* Modal Header */}
+            <div className="sticky top-0 border-b border-gray-300 bg-white px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  {/* Avatar */}
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-gray-300 bg-gray-50">
+                    <span className="text-sm font-bold text-gray-700">
+                      {(selectedBid.username ??
+                        selectedBid.freelancer_address)?.[0]?.toUpperCase() ??
+                        "?"}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {selectedBid.username ??
+                        shortenAddress(selectedBid.freelancer_address)}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {new Date(selectedBid.created_at).toLocaleDateString(
+                        "en-US",
+                        {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        },
+                      )}
+                      {selectedBid.proposed_timeline &&
+                        ` • ${selectedBid.proposed_timeline}`}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Close button */}
                 <button
-                  onClick={() => setExpandedId(isExpanded ? null : bid.id)}
-                  className="text-xs text-initia-600 hover:underline"
+                  onClick={() => setSelectedBid(null)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 text-gray-400 transition-all hover:border-black hover:bg-black hover:text-white"
                 >
-                  {isExpanded ? "Hide" : "Read letter"}
-                </button>
-
-                {/* Accept button — client only */}
-                {canAccept && (
-                  <button
-                    onClick={() => handleAccept(bid)}
-                    disabled={!!acceptingId}
-                    className="rounded-lg bg-initia-600 px-3.5 py-1.5 text-xs font-semibold text-gray-500 cursor-pointer transition hover:bg-initia-700 disabled:opacity-50"
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    {isAccepting ? "Accepting…" : "Accept Bid"}
-                  </button>
-                )}
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
               </div>
             </div>
 
-            {/* Cover letter */}
-            {isExpanded && (
-              <div className="border-t border-gray-100 px-4 pb-4 pt-3">
-                <p className="whitespace-pre-wrap text-sm text-gray-600 leading-relaxed">
-                  {bid.cover_letter}
-                </p>
+            {/* Modal Body */}
+            <div className="px-6 py-4 overflow-y-auto max-h-[60vh]">
+              {/* Cover Letter */}
+              <div className="mb-6">
+                <h4 className="mb-3 text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                  Cover Letter
+                </h4>
+                <div className="rounded-lg border border-gray-300 bg-gray-50 p-4">
+                  <p className="whitespace-pre-wrap text-sm text-gray-700 leading-relaxed">
+                    {selectedBid.cover_letter}
+                  </p>
+                </div>
               </div>
-            )}
-          </div>
-        );
-      })}
 
-      {/* Helpful note for client if no chain job id yet */}
-      {isClient && !chainJobId && jobStatus === "open" && (
-        <p className="text-center text-xs text-gray-400">
-          Waiting for on-chain confirmation before bids can be accepted.
-        </p>
+              {/* Additional Info */}
+              {selectedBid.proposed_timeline && (
+                <div className="mb-6">
+                  <h4 className="mb-2 text-sm font-semibold text-gray-900 uppercase tracking-wide">
+                    Proposed Timeline
+                  </h4>
+                  <div className="rounded-lg border border-gray-300 bg-gray-50 p-4">
+                    <p className="text-sm text-gray-600">
+                      {selectedBid.proposed_timeline}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 border-t border-gray-300 bg-white px-6 py-4">
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setSelectedBid(null)}
+                  className="rounded-lg border border-gray-300 bg-white px-6 py-2.5 text-sm font-medium text-gray-700 transition-all hover:border-black hover:bg-gray-100"
+                >
+                  Close
+                </button>
+
+                {/* Accept button - client only */}
+                {isClient &&
+                  jobStatus === "open" &&
+                  selectedBid.status === "pending" &&
+                  !!signer &&
+                  !!chainJobId && (
+                    <button
+                      onClick={() => handleAccept(selectedBid)}
+                      disabled={!!acceptingId}
+                      className="rounded-lg border border-black bg-black px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {acceptingId === selectedBid.id
+                        ? "Accepting…"
+                        : "Accept Bid"}
+                    </button>
+                  )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
-    </div>
+    </>
   );
 }
