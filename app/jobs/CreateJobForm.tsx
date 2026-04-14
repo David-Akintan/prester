@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useWallet } from "@/app/components/wallet/WalletContext1.0";
+import { useWallet } from "@/app/components/wallet/WalletContext";
 import { createJob } from "@/lib/contracts";
 import { jobsApi, ipfsApi } from "@/lib/api";
 import {
@@ -243,14 +243,14 @@ export function CreateJobForm() {
         {/* Section header */}
         <div className="mb-8 pb-4 border-b border-neutral-200">
           <div className="flex items-baseline gap-3">
-            <span className="text-xs font-mono text-neutral-400 uppercase tracking-widest">
+            {/* <span className="text-xs font-mono text-neutral-400 uppercase tracking-widest">
               01
-            </span>
+            </span> */}
             <h2 className="text-lg font-bold tracking-tight text-black uppercase">
               Job Details
             </h2>
           </div>
-          <p className="mt-1.5 text-sm text-neutral-500 ml-8">
+          <p className="mt-1.5 text-sm text-neutral-500 ">
             Provide comprehensive information about your project to attract the
             right talent.
           </p>
@@ -390,14 +390,14 @@ export function CreateJobForm() {
         <div className="mb-8 pb-4 border-b border-neutral-200 flex items-start justify-between">
           <div>
             <div className="flex items-baseline gap-3">
-              <span className="text-xs font-mono text-neutral-400 uppercase tracking-widest">
+              {/* <span className="text-xs font-mono text-neutral-400 uppercase tracking-widest">
                 02
-              </span>
+              </span> */}
               <h2 className="text-lg font-bold tracking-tight text-black uppercase">
                 Project Milestones
               </h2>
             </div>
-            <p className="mt-1.5 text-sm text-neutral-500 ml-8">
+            <p className="mt-1.5 text-sm text-neutral-500">
               Break your project into clear deliverables with payment
               milestones.
             </p>

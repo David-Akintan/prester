@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useWallet } from "@/app/components/wallet/WalletContext1.0";
+import { useWallet } from "@/app/components/wallet/WalletContext";
 import { useJob } from "@/hooks/useMyJobs";
 import { useFreelancerDashboard } from "@/hooks/useFreelancerDashboard";
 import { JobCard } from "@/app/jobs/JobCard";
@@ -342,7 +342,7 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {postedJobs.map((job) => (
                   <JobCard key={job.id} job={job} />
                 ))}
@@ -393,7 +393,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {activeBids.map((job) => {
                     const myBid = job.bids?.find(
                       (b) =>

@@ -88,6 +88,264 @@
   --radius-full: 9999px;
 }
 
+/* ===== DARK MODE TOKENS ===== */
+[data-theme="dark"] {
+  --color-background: #0a0a0a;
+  --color-foreground: #fafafa;
+  --color-surface: #111111;
+  --color-surface-foreground: #fafafa;
+  --color-border: #262626;
+  --color-border-subtle: #1a1a1a;
+  --color-muted: #171717;
+  --color-muted-foreground: #a3a3a3;
+  --color-input: #111111;
+  --color-input-border: #2a2a2a;
+  --color-ring: #fafafa;
+
+  --color-primary: #fafafa;
+  --color-primary-foreground: #0a0a0a;
+  --color-secondary: #111111;
+  --color-secondary-foreground: #fafafa;
+  --color-accent: #fafafa;
+  --color-accent-foreground: #0a0a0a;
+
+  /* Gray scale inversions for components still using raw gray tokens */
+  --color-gray-50: #0f0f0f;
+  --color-gray-100: #171717;
+  --color-gray-200: #1f1f1f;
+  --color-gray-300: #2a2a2a;
+  --color-gray-400: #3a3a3a;
+  --color-gray-500: #525252;
+  --color-gray-600: #737373;
+  --color-gray-700: #a3a3a3;
+  --color-gray-800: #d4d4d4;
+  --color-gray-900: #e5e5e5;
+}
+
+[data-theme="dark"] ::selection {
+  background-color: #fafafa;
+  color: #0a0a0a;
+}
+[data-theme="dark"] ::-moz-selection {
+  background-color: #fafafa;
+  color: #0a0a0a;
+}
+
+/* ===== DARK MODE: legacy hardcoded class overrides =====
+   Many pages use literal Tailwind color classes (bg-white, text-black,
+   text-gray-*, text-neutral-*, border-gray-*, etc.) predating the token
+   system. Rather than rewriting every page, remap them here so the
+   theme toggle applies site-wide. */
+[data-theme="dark"] .bg-white {
+  background-color: var(--color-surface) !important;
+}
+[data-theme="dark"] .text-black {
+  color: var(--color-foreground) !important;
+}
+[data-theme="dark"] .bg-black {
+  background-color: var(--color-foreground) !important;
+}
+[data-theme="dark"] .text-white {
+  color: var(--color-background) !important;
+}
+
+/* Gray scale — light surfaces */
+[data-theme="dark"] .bg-gray-50,
+[data-theme="dark"] .bg-neutral-50 {
+  background-color: #0f0f0f !important;
+}
+[data-theme="dark"] .bg-gray-100,
+[data-theme="dark"] .bg-neutral-100 {
+  background-color: #171717 !important;
+}
+[data-theme="dark"] .bg-gray-200,
+[data-theme="dark"] .bg-neutral-200 {
+  background-color: #1f1f1f !important;
+}
+[data-theme="dark"] .bg-gray-300,
+[data-theme="dark"] .bg-neutral-300 {
+  background-color: #262626 !important;
+}
+
+/* Gray scale — text (inverted: dark text in light mode → light text in dark) */
+[data-theme="dark"] .text-gray-100,
+[data-theme="dark"] .text-neutral-100 {
+  color: #262626 !important;
+}
+[data-theme="dark"] .text-gray-200,
+[data-theme="dark"] .text-neutral-200 {
+  color: #3a3a3a !important;
+}
+[data-theme="dark"] .text-gray-300,
+[data-theme="dark"] .text-neutral-300 {
+  color: #525252 !important;
+}
+[data-theme="dark"] .text-gray-400,
+[data-theme="dark"] .text-neutral-400 {
+  color: #737373 !important;
+}
+[data-theme="dark"] .text-gray-500,
+[data-theme="dark"] .text-neutral-500 {
+  color: #a3a3a3 !important;
+}
+[data-theme="dark"] .text-gray-600,
+[data-theme="dark"] .text-neutral-600 {
+  color: #d4d4d4 !important;
+}
+[data-theme="dark"] .text-gray-700,
+[data-theme="dark"] .text-neutral-700 {
+  color: #e5e5e5 !important;
+}
+[data-theme="dark"] .text-gray-800,
+[data-theme="dark"] .text-neutral-800 {
+  color: #f5f5f5 !important;
+}
+[data-theme="dark"] .text-gray-900,
+[data-theme="dark"] .text-neutral-900 {
+  color: #fafafa !important;
+}
+
+/* border-white used inside inverted (bg-black) blocks that flip in dark mode.
+   In light mode border-white was invisible against white bg — a deliberate
+   "no border" look. In dark mode bg-black flips to light, so border-white
+   should flip to dark to preserve the same visual. */
+[data-theme="dark"] .border-white {
+  border-color: var(--color-background) !important;
+}
+[data-theme="dark"] .hover\:border-white:hover {
+  border-color: var(--color-background) !important;
+}
+[data-theme="dark"] .border-neutral-600,
+[data-theme="dark"] .border-gray-600 {
+  border-color: #b8b8b8 !important;
+}
+
+/* text-neutral-600 inside inverted blocks (was muted white → muted dark) */
+[data-theme="dark"] .text-neutral-600-on-dark {
+  color: #737373 !important;
+}
+
+/* hover:bg-neutral-800 (used on bg-black CTAs for subtle darker hover).
+   In dark mode, bg-black flips to light, so hover should go to a slightly
+   darker light shade. */
+[data-theme="dark"] .hover\:bg-neutral-800:hover,
+[data-theme="dark"] .hover\:bg-gray-800:hover {
+  background-color: #d4d4d4 !important;
+}
+
+/* Gray scale — borders */
+[data-theme="dark"] .border-gray-100,
+[data-theme="dark"] .border-neutral-100 {
+  border-color: #1a1a1a !important;
+}
+[data-theme="dark"] .border-gray-200,
+[data-theme="dark"] .border-neutral-200 {
+  border-color: #1f1f1f !important;
+}
+[data-theme="dark"] .border-gray-300,
+[data-theme="dark"] .border-neutral-300 {
+  border-color: #262626 !important;
+}
+[data-theme="dark"] .border-gray-400,
+[data-theme="dark"] .border-neutral-400 {
+  border-color: #3a3a3a !important;
+}
+
+/* Divide utilities (divide-gray-*, divide-neutral-*) */
+[data-theme="dark"] .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+[data-theme="dark"] .divide-neutral-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1a1a1a !important;
+}
+[data-theme="dark"] .divide-gray-200 > :not([hidden]) ~ :not([hidden]),
+[data-theme="dark"] .divide-neutral-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1f1f1f !important;
+}
+
+/* Hover variants — most common */
+[data-theme="dark"] .hover\:bg-white:hover {
+  background-color: var(--color-surface) !important;
+}
+[data-theme="dark"] .hover\:text-black:hover {
+  color: var(--color-foreground) !important;
+}
+[data-theme="dark"] .hover\:bg-black:hover {
+  background-color: var(--color-foreground) !important;
+}
+[data-theme="dark"] .hover\:text-white:hover {
+  color: var(--color-background) !important;
+}
+[data-theme="dark"] .hover\:bg-gray-100:hover,
+[data-theme="dark"] .hover\:bg-neutral-100:hover {
+  background-color: #171717 !important;
+}
+[data-theme="dark"] .hover\:bg-gray-50:hover,
+[data-theme="dark"] .hover\:bg-neutral-50:hover {
+  background-color: #0f0f0f !important;
+}
+[data-theme="dark"] .hover\:text-gray-700:hover,
+[data-theme="dark"] .hover\:text-neutral-700:hover {
+  color: #e5e5e5 !important;
+}
+[data-theme="dark"] .hover\:border-black:hover {
+  border-color: var(--color-foreground) !important;
+}
+[data-theme="dark"] .hover\:border-gray-300:hover,
+[data-theme="dark"] .hover\:border-neutral-300:hover {
+  border-color: #3a3a3a !important;
+}
+
+/* Placeholder text */
+[data-theme="dark"] .placeholder-gray-500::placeholder,
+[data-theme="dark"] .placeholder-neutral-500::placeholder {
+  color: #737373 !important;
+}
+[data-theme="dark"] .placeholder-gray-400::placeholder,
+[data-theme="dark"] .placeholder-neutral-400::placeholder {
+  color: #525252 !important;
+}
+
+/* Colored status backgrounds used for banners — mute them */
+[data-theme="dark"] .bg-red-50,
+[data-theme="dark"] .bg-blue-50,
+[data-theme="dark"] .bg-green-50,
+[data-theme="dark"] .bg-amber-50,
+[data-theme="dark"] .bg-yellow-50 {
+  background-color: #171717 !important;
+}
+[data-theme="dark"] .bg-red-100,
+[data-theme="dark"] .bg-blue-100,
+[data-theme="dark"] .bg-green-100 {
+  background-color: #1f1f1f !important;
+}
+[data-theme="dark"] .border-red-200,
+[data-theme="dark"] .border-blue-200,
+[data-theme="dark"] .border-blue-300,
+[data-theme="dark"] .border-green-200,
+[data-theme="dark"] .border-green-500,
+[data-theme="dark"] .border-amber-200 {
+  border-color: #262626 !important;
+}
+[data-theme="dark"] .text-red-500,
+[data-theme="dark"] .text-red-600,
+[data-theme="dark"] .text-red-700 {
+  color: #fca5a5 !important;
+}
+[data-theme="dark"] .text-blue-500,
+[data-theme="dark"] .text-blue-600,
+[data-theme="dark"] .text-blue-700,
+[data-theme="dark"] .text-blue-800 {
+  color: #93c5fd !important;
+}
+[data-theme="dark"] .text-green-500,
+[data-theme="dark"] .text-green-600,
+[data-theme="dark"] .text-green-700,
+[data-theme="dark"] .text-green-800 {
+  color: #86efac !important;
+}
+[data-theme="dark"] .text-amber-700 {
+  color: #fcd34d !important;
+}
+
 /* ===== THEME INLINE CONFIGURATION ===== */
 @theme inline {
   --color-background: var(--color-background);
@@ -151,6 +409,14 @@ h3 {
   font-weight: 600;
 }
 
+/* Override global h2 styles for section headings */
+section h2 {
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  color: var(--color-gray-500) !important;
+  letter-spacing: 0.05em !important;
+}
+
 h4 {
   font-size: clamp(1.125rem, 2.5vw, 1.5rem);
   font-weight: 600;
@@ -172,15 +438,26 @@ p {
 }
 
 a {
-  color: var(--color-foreground);
-  text-decoration: underline;
-  text-decoration-offset: 2px;
+  /* color: var(--color-foreground); */
+  text-decoration: none;
   text-decoration-color: var(--color-border);
   transition: var(--transition-base);
 }
 
-a:hover {
+/* Links that should have underlines on hover */
+a.underline-hover:hover {
+  text-decoration: underline;
   text-decoration-color: var(--color-foreground);
+}
+
+/* Job card links should not have underlines on hover */
+.job-card-link:hover {
+  text-decoration: none !important;
+}
+
+/* Prevent underlines on all text elements within job cards on hover */
+.job-card-link:hover * {
+  text-decoration: none !important;
 }
 
 /* ===== FORM ELEMENTS ===== */
@@ -579,7 +856,31 @@ button:disabled {
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  /* Dark mode support can be added here if needed */
-  /* For now, maintaining strict black/white theme */
+/* ===== TOKEN UTILITY ALIASES ===== */
+.bg-surface {
+  background-color: var(--color-surface);
+}
+.bg-bg {
+  background-color: var(--color-background);
+}
+.bg-muted {
+  background-color: var(--color-muted);
+}
+.text-fg {
+  color: var(--color-foreground);
+}
+.text-muted {
+  color: var(--color-muted-foreground);
+}
+.border-default {
+  border-color: var(--color-border);
+}
+.border-subtle {
+  border-color: var(--color-border-subtle);
+}
+
+/* Body always follows tokens */
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
 }

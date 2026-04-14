@@ -17,7 +17,7 @@ export function JobCard({ job, className }: JobCardProps) {
   });
 
   return (
-    <Link href={`/jobs/${job.id}`}>
+    <Link href={`/jobs/${job.id}`} className="job-card-link">
       <article
         className={cn(
           "group border border-gray-300 bg-white transition-all duration-300 animate-fade-in-up rounded-xl h-full flex flex-col",
@@ -30,7 +30,7 @@ export function JobCard({ job, className }: JobCardProps) {
         <div className="flex flex-col h-full p-6">
           {/* Top row - Title and Status */}
           <div className="mb-4 flex items-start justify-between gap-3">
-            <h3 className="text-lg font-semibold text-black group-hover:text-black line-clamp-2 transition-colors animate-slide-up flex-1 pr-2">
+            <h3 className="text-lg font-semibold text-black group-hover:text-black line-clamp-2 transition-colors animate-slide-up flex-1 pr-2 leading-tight">
               {job.title}
             </h3>
             <div className="animate-scale-in animation-delay-200 shrink-0">
@@ -38,15 +38,15 @@ export function JobCard({ job, className }: JobCardProps) {
             </div>
           </div>
 
-          {/* Description - Fixed height */}
-          <div className="mb-4 h-16">
+          {/* Description - Better height control */}
+          <div className="mb-4 min-h-[4rem]">
             <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed animate-slide-up animation-delay-300">
               {job.description}
             </p>
           </div>
 
-          {/* Tags - Fixed height */}
-          <div className="mb-4 h-8 flex flex-wrap gap-2 animate-slide-up animation-delay-400">
+          {/* Tags - Better height control */}
+          <div className="mb-4 min-h-[2rem] flex flex-wrap gap-2 animate-slide-up animation-delay-400">
             {job.required_skills?.length > 0 ? (
               <>
                 {job.required_skills.slice(0, 3).map((skill, index) => (
@@ -78,9 +78,9 @@ export function JobCard({ job, className }: JobCardProps) {
 
           {/* Footer - Always at bottom */}
           <div className="flex flex-col gap-3 border-t border-gray-300 pt-4 animate-slide-up animation-delay-500">
-            {/* Payment and stats row */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+            {/* Payment and stats row - Better spacing */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-wrap">
                 {/* Payment */}
                 <div className="flex items-center gap-1.5 group/payment">
                   <span className="text-xs font-mono text-gray-400 uppercase tracking-wider group-hover/payment:text-black transition-colors">
@@ -120,8 +120,8 @@ export function JobCard({ job, className }: JobCardProps) {
               </div>
             </div>
 
-            {/* Duration and date row */}
-            <div className="flex items-center justify-between text-xs text-gray-400">
+            {/* Duration and date row - Better spacing */}
+            <div className="flex items-center justify-between text-xs text-gray-400 gap-4">
               <div className="flex items-center gap-2">
                 {job.estimated_duration && (
                   <span className="font-medium">{job.estimated_duration}</span>

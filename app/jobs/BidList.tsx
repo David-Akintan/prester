@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { bidsApi, jobsApi, ApiError, type BidRecord } from "@/lib/api";
+import { useState, useEffect } from "react";
+import { ApiError, type BidRecord } from "@/lib/api";
 import { acceptBid } from "@/lib/contracts";
 import { shortenAddress, parseContractError, cn } from "@/lib/utils";
 import type { JsonRpcSigner } from "ethers";
@@ -37,26 +37,26 @@ export function BidList({
     setSuccessMsg(null);
 
     try {
-      // 1. On-chain: assign freelancer via escrow contract
+      // On-chain: assign freelancer via escrow contract.
+      // The backend chain listener handles DB sync when it sees BidAccepted.
       await acceptBid(signer, BigInt(chainJobId), bid.freelancer_address);
 
-      // 2. Off-chain: update bid + job status in backend DB
-      await bidsApi.accept(jobId, bid.id);
-
       setSuccessMsg(
-        `Bid accepted! ${bid.username ?? shortenAddress(bid.freelancer_address)} is now assigned.`,
+        `Bid accepted! ${bid.username ?? shortenAddress(bid.freelancer_address)} is now assigned. Syncing…`,
       );
+
+      // Give the chain listener a moment to process the event before refreshing
+      await new Promise((r) => setTimeout(r, 3_000));
       await onRefresh();
-      setSelectedBid(null); // Close modal after successful acceptance
+      setSelectedBid(null);
     } catch (err) {
       const parsed =
         err instanceof ApiError ? err.message : parseContractError(err);
-      // Detect stale-state case specifically and give an actionable message
       if (parsed.includes("JobAlreadyHasFreelancer")) {
         setError(
           "This job already has a freelancer assigned on-chain. Refreshing data…",
         );
-        await onRefresh(); // pull fresh state so button disappears
+        await onRefresh();
       } else {
         setError(parsed);
       }

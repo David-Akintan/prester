@@ -1,21 +1,24 @@
 import { cn } from "@/lib/utils";
 
-const STATUS_STYLES: Record<string, string> = {
+// Two visual variants, both theme-safe via CSS tokens:
+//  - "solid": inverted foreground bg — used for active/current states
+//  - "outline": border + muted text — used for passive/terminal states
+const STATUS_VARIANT: Record<string, "solid" | "outline"> = {
   // Job
-  draft: "border-neutral-200 text-neutral-400",
-  open: "border-black text-black",
-  in_progress: "border-black bg-black text-white",
-  completed: "border-neutral-400 text-neutral-500",
-  cancelled: "border-neutral-200 text-neutral-300",
+  draft: "outline",
+  open: "outline",
+  in_progress: "solid",
+  completed: "outline",
+  cancelled: "outline",
   // Milestone
-  pending: "border-neutral-200 text-neutral-400",
-  submitted: "border-black text-black",
-  approved: "border-neutral-400 text-neutral-600",
-  disputed: "border-black bg-black text-white",
-  resolved: "border-neutral-400 text-neutral-500",
+  pending: "outline",
+  submitted: "solid",
+  approved: "outline",
+  disputed: "solid",
+  resolved: "outline",
   // Bid
-  accepted: "border-black bg-black text-white",
-  rejected: "border-neutral-200 text-neutral-300",
+  accepted: "solid",
+  rejected: "outline",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -39,11 +42,17 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
+  const variant = STATUS_VARIANT[status] ?? "outline";
+  const classes =
+    variant === "solid"
+      ? "border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-background)]"
+      : "border-default text-muted";
+
   return (
     <span
       className={cn(
-        "inline-flex items-center border px-2 py-0.5 text-xs font-medium uppercase tracking-wide",
-        STATUS_STYLES[status] ?? "border-neutral-200 text-neutral-400",
+        "inline-flex items-center border px-2 py-0.5 text-xs font-medium uppercase tracking-wide rounded",
+        classes,
         className,
       )}
     >

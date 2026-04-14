@@ -1,10 +1,45 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { jobsApi } from "@/lib/api";
+
+function useLiveStats() {
+  const [stats, setStats] = useState({
+    totalJobs: 0,
+    activeJobs: 0,
+    completedJobs: 0,
+    loading: true,
+  });
+
+  useEffect(() => {
+    async function fetch() {
+      try {
+        const [all, completed] = await Promise.all([
+          jobsApi.list({ limit: 1 }),
+          jobsApi.list({ status: "completed", limit: 1 }),
+        ]);
+        setStats({
+          totalJobs: all.total,
+          activeJobs: all.total - completed.total,
+          completedJobs: completed.total,
+          loading: false,
+        });
+      } catch {
+        setStats((s) => ({ ...s, loading: false }));
+      }
+    }
+    fetch();
+  }, []);
+
+  return stats;
+}
 
 export default function Home() {
+  const stats = useLiveStats();
+
   return (
-    <div className="min-h-screen bg-white animate-fadeIn">
+    <div className="min-h-screen animate-fadeIn">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* ── Hero ──────────────────────────────────────────── */}
         <div className="mb-24 animate-slideDown">
@@ -151,13 +186,13 @@ export default function Home() {
                 className="relative group animate-fadeInUp"
                 style={{ animationDelay: `${1000 + i * 200}ms` }}
               >
-                <div className="border border-black bg-white p-8 h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-2">
+                <div className="border border-default bg-surface p-8 h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:border-[var(--color-foreground)]">
                   <div className="mb-8">
                     <div className="flex items-center justify-between mb-6">
-                      <span className="text-3xl font-bold text-neutral-100">
+                      <span className="text-3xl font-bold text-[var(--color-border)]">
                         {item.step}
                       </span>
-                      <div className="flex h-12 w-12 items-center justify-center border border-black bg-black transition-all group-hover:bg-white group-hover:text-black ">
+                      <div className="flex h-12 w-12 items-center justify-center border border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-background)] transition-all group-hover:bg-[var(--color-background)] group-hover:text-[var(--color-foreground)]">
                         {item.icon}
                       </div>
                     </div>
@@ -170,7 +205,7 @@ export default function Home() {
                   </p>
                 </div>
                 {i < 2 && (
-                  <div className="hidden sm:block absolute top-1/2 -right-4 w-8 h-px bg-black transform -translate-y-1/2 transition-all group-hover:scale-x-150 animate-slideIn" />
+                  <div className="hidden sm:block absolute top-1/2 -right-4 w-8 h-px bg-[var(--color-foreground)] transform -translate-y-1/2 transition-all group-hover:scale-x-150 animate-slideIn" />
                 )}
               </div>
             ))}
@@ -179,24 +214,33 @@ export default function Home() {
 
         {/* ── Stats ────────────────────────────────────────────── */}
         <div
-          className="border border-black bg-black p-12 text-center animate-fadeInUp"
+          className="border border-default bg-[var(--color-foreground)] text-[var(--color-background)] p-12 text-center animate-fadeInUp"
           style={{ animationDelay: "1600ms" }}
         >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             {[
-              { value: "$2.5M+", label: "Total Escrowed" },
-              { value: "500+", label: "Opportunities Posted" },
-              { value: "99.8%", label: "Dispute Resolution Rate" },
+              {
+                value: stats.loading ? "—" : String(stats.totalJobs),
+                label: "Jobs Posted",
+              },
+              {
+                value: stats.loading ? "—" : String(stats.activeJobs),
+                label: "Active Jobs",
+              },
+              {
+                value: stats.loading ? "—" : String(stats.completedJobs),
+                label: "Completed Jobs",
+              },
             ].map((stat, i) => (
               <div
                 key={i}
                 className="space-y-2 animate-scaleIn"
                 style={{ animationDelay: `${1700 + i * 100}ms` }}
               >
-                <div className="text-3xl font-bold text-white font-mono ">
+                <div className="text-3xl font-bold text-[var(--color-background)] font-mono">
                   {stat.value}
                 </div>
-                <div className="text-sm text-neutral-400 uppercase tracking-widest">
+                <div className="text-sm uppercase tracking-widest opacity-60">
                   {stat.label}
                 </div>
               </div>

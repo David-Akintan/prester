@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -6,22 +6,49 @@ export async function POST(request: NextRequest) {
 
     if (!content) {
       return NextResponse.json(
-        { error: 'Content is required' },
-        { status: 400 }
+        { error: "Content is required" },
+        { status: 400 },
       );
     }
 
-    // Mock IPFS upload for development
-    // In production, you would integrate with Pinata or another IPFS service
-    const mockIpfsHash = 'Qm' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const uri = `ipfs://${mockIpfsHash}`;
+    const jwt = process.env.PINATA_JWT;
+    if (!jwt) {
+      return NextResponse.json(
+        { error: "IPFS service not configured" },
+        { status: 503 },
+      );
+    }
 
-    return NextResponse.json({ uri });
+    const res = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${jwt}`,
+      },
+      body: JSON.stringify({
+        pinataContent: content,
+        pinataMetadata: {
+          name: `prester-${type}-${Date.now()}`,
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("Pinata error:", err);
+      return NextResponse.json(
+        { error: "IPFS upload failed" },
+        { status: 502 },
+      );
+    }
+
+    const data = (await res.json()) as { IpfsHash: string };
+    return NextResponse.json({ uri: `ipfs://${data.IpfsHash}` });
   } catch (error) {
-    console.error('IPFS upload error:', error);
+    console.error("IPFS upload error:", error);
     return NextResponse.json(
-      { error: 'Failed to upload to IPFS' },
-      { status: 500 }
+      { error: "Failed to upload to IPFS" },
+      { status: 500 },
     );
   }
 }

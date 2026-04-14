@@ -15,6 +15,9 @@ import {
 const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const TOKEN_ISSUED_KEY = "fl3_token_issued";
 
+// Chain ID — Sepolia for Phase 1, will change to Minitia in Phase 3
+const CHAIN_ID = 11155111;
+
 export interface AuthState {
   authAddress: string | null;
   isAuthenticating: boolean;
@@ -28,17 +31,48 @@ export interface AuthState {
   clearAuthError: () => void;
 }
 
+/**
+ * Build an EIP-4361 SIWE message string.
+ * We construct it manually to avoid importing the `siwe` package
+ * (which pulls Node.js-only dependencies that break in the browser).
+ *
+ * Format spec: https://eips.ethereum.org/EIPS/eip-4361
+ */
+function buildSiweMessage(params: {
+  domain: string;
+  address: string;
+  uri: string;
+  nonce: string;
+  chainId: number;
+  issuedAt: string;
+}): string {
+  // EIP-4361 requires EIP-55 checksummed address.
+  // The wallet provides this, but lowercase addresses from the backend won't parse.
+  // Wagmi/ethers signers always return checksummed, so this should be fine,
+  // but we guard against it just in case.
+  const lines = [
+    `${params.domain} wants you to sign in with your Ethereum account:`,
+    params.address,
+    "",
+    "Sign in to Prester",
+    "",
+    `URI: ${params.uri}`,
+    `Version: 1`,
+    `Chain ID: ${params.chainId}`,
+    `Nonce: ${params.nonce}`,
+    `Issued At: ${params.issuedAt}`,
+  ];
+  return lines.join("\n");
+}
+
 export function useAuth(): AuthState {
   const [authAddress, setAuthAddress] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Stable ref so WalletContext's useCallback never captures a stale signIn
   const signInRef = useRef<AuthState["signIn"] | null>(null);
 
   // ── Restore session on mount ────────────────────────────
-  // Only restore if the token was issued recently enough to still be valid.
-  // This prevents a "signed in" flash followed by a 401 on the first API call.
   useEffect(() => {
     const token = getToken();
     const savedAddr = getSavedAddress();
@@ -46,7 +80,6 @@ export function useAuth(): AuthState {
 
     if (!token || !savedAddr) return;
 
-    // If we don't know when it was issued, treat it as expired to be safe
     if (!issuedAt) {
       clearToken();
       localStorage.removeItem(TOKEN_ISSUED_KEY);
@@ -55,7 +88,6 @@ export function useAuth(): AuthState {
 
     const age = Date.now() - parseInt(issuedAt, 10);
     if (age > TOKEN_TTL_MS) {
-      // Token has expired — clear everything and force re-login
       clearToken();
       localStorage.removeItem(TOKEN_ISSUED_KEY);
       return;
@@ -64,7 +96,7 @@ export function useAuth(): AuthState {
     setAuthAddress(savedAddr);
   }, []);
 
-  // ── Sign in ─────────────────────────────────────────────
+  // ── Sign in with SIWE ──────────────────────────────────
   const signIn = useCallback(
     async (
       address: string,
@@ -74,19 +106,29 @@ export function useAuth(): AuthState {
       setAuthError(null);
 
       try {
-        // Step 1: get a one-time challenge message from the backend
-        const { message } = await authApi.getNonce(address);
+        // Step 1: get a one-time nonce from the backend
+        const { nonce } = await authApi.getNonce(address);
 
-        // Step 2: ask the wallet to sign it — this is the popup the user sees
-        const signature = await signMessage(message);
-
-        // Step 3: backend verifies the signature and returns a JWT
-        const { token, address: verifiedAddress } = await authApi.verify(
+        // Step 2: construct an EIP-4361 SIWE message
+        const messageStr = buildSiweMessage({
+          domain: window.location.host,
           address,
+          uri: window.location.origin,
+          nonce,
+          chainId: CHAIN_ID,
+          issuedAt: new Date().toISOString(),
+        });
+
+        // Step 3: ask the wallet to sign the SIWE message
+        const signature = await signMessage(messageStr);
+
+        // Step 4: backend verifies the SIWE message + signature and returns JWT
+        const { token, address: verifiedAddress } = await authApi.verify(
+          messageStr,
           signature,
         );
 
-        // Step 4: persist token with issue timestamp
+        // Step 5: persist
         setToken(token);
         saveAddress(verifiedAddress);
         localStorage.setItem(TOKEN_ISSUED_KEY, String(Date.now()));
@@ -114,7 +156,6 @@ export function useAuth(): AuthState {
         }
 
         setAuthError(message);
-        // Re-throw so WalletContext knows sign-in failed and can reset wallet state
         throw new Error(message);
       } finally {
         setIsAuthenticating(false);
@@ -123,8 +164,6 @@ export function useAuth(): AuthState {
     [],
   );
 
-  // Keep ref in sync with the latest signIn so WalletContext can call it
-  // via ref without a stale closure
   signInRef.current = signIn;
 
   const signOut = useCallback(() => {

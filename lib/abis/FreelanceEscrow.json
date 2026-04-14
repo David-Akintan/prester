@@ -3,7 +3,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_judgeAddress",
+        "name": "_judgeRegistry",
         "type": "address"
       },
       {
@@ -20,10 +20,30 @@
         "internalType": "address",
         "name": "_feeRecipient",
         "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_reputationContract",
+        "type": "address"
       }
     ],
     "stateMutability": "nonpayable",
     "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "ApprovalDeadlineNotExpired",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "DeadlineNotExpired",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "DisputeNotStuck",
+    "type": "error"
   },
   {
     "inputs": [],
@@ -48,6 +68,11 @@
   {
     "inputs": [],
     "name": "JobAlreadyHasFreelancer",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "JobDoesNotExist",
     "type": "error"
   },
   {
@@ -106,11 +131,6 @@
     "type": "error"
   },
   {
-    "inputs": [],
-    "name": "NotJudge",
-    "type": "error"
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
@@ -134,12 +154,22 @@
   },
   {
     "inputs": [],
+    "name": "ReceiveNotAllowed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "ReentrancyGuardReentrantCall",
     "type": "error"
   },
   {
     "inputs": [],
     "name": "TransferFailed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "VerdictNotReady",
     "type": "error"
   },
   {
@@ -200,6 +230,25 @@
         "type": "uint256"
       },
       {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "refundAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "DeadlineCancelled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
+      },
+      {
         "indexed": true,
         "internalType": "uint256",
         "name": "milestoneIndex",
@@ -213,6 +262,50 @@
       }
     ],
     "name": "DisputeRaised",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "refundAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "EmergencyRefund",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "milestoneIndex",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "winner",
+        "type": "address"
+      }
+    ],
+    "name": "EmergencyResolved",
     "type": "event"
   },
   {
@@ -277,17 +370,17 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "oldJudge",
+        "name": "oldRegistry",
         "type": "address"
       },
       {
         "indexed": true,
         "internalType": "address",
-        "name": "newJudge",
+        "name": "newRegistry",
         "type": "address"
       }
     ],
-    "name": "JudgeAddressUpdated",
+    "name": "JudgeRegistryUpdated",
     "type": "event"
   },
   {
@@ -313,6 +406,31 @@
       }
     ],
     "name": "MilestoneApproved",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "milestoneIndex",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amountReleased",
+        "type": "uint256"
+      }
+    ],
+    "name": "MilestoneAutoApproved",
     "type": "event"
   },
   {
@@ -395,6 +513,44 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "reason",
+        "type": "string"
+      }
+    ],
+    "name": "ReputationCallFailed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "oldContract",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newContract",
+        "type": "address"
+      }
+    ],
+    "name": "ReputationContractUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": false,
         "internalType": "address",
         "name": "account",
@@ -427,9 +583,9 @@
       },
       {
         "indexed": false,
-        "internalType": "string",
-        "name": "reasonUri",
-        "type": "string"
+        "internalType": "bytes32",
+        "name": "merkleRoot",
+        "type": "bytes32"
       }
     ],
     "name": "VerdictExecuted",
@@ -454,6 +610,19 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "approvalDeadlineDuration",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -467,6 +636,37 @@
       }
     ],
     "name": "approveMilestone",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "milestoneIndex",
+        "type": "uint256"
+      }
+    ],
+    "name": "autoApproveMilestone",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
+      }
+    ],
+    "name": "cancelDeadlinedJob",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -532,6 +732,19 @@
         "internalType": "uint256",
         "name": "jobId",
         "type": "uint256"
+      }
+    ],
+    "name": "emergencyRefund",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
       },
       {
         "internalType": "uint256",
@@ -542,11 +755,24 @@
         "internalType": "address",
         "name": "winner",
         "type": "address"
+      }
+    ],
+    "name": "emergencyResolveDispute",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
       },
       {
-        "internalType": "string",
-        "name": "reasonUri",
-        "type": "string"
+        "internalType": "uint256",
+        "name": "milestoneIndex",
+        "type": "uint256"
       }
     ],
     "name": "executeVerdict",
@@ -633,6 +859,11 @@
       },
       {
         "internalType": "uint256",
+        "name": "assignedAt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
         "name": "cancellationFee",
         "type": "uint256"
       }
@@ -674,6 +905,11 @@
         "internalType": "enum FreelanceEscrow.MilestoneStatus",
         "name": "status",
         "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "submittedAt",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -699,6 +935,49 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "milestoneIndex",
+        "type": "uint256"
+      }
+    ],
+    "name": "isApprovalDeadlineExpired",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "jobId",
+        "type": "uint256"
+      }
+    ],
+    "name": "isSubmissionDeadlineExpired",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "jobCount",
     "outputs": [
@@ -713,7 +992,7 @@
   },
   {
     "inputs": [],
-    "name": "judgeAddress",
+    "name": "judgeRegistry",
     "outputs": [
       {
         "internalType": "address",
@@ -809,6 +1088,32 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "reputationContract",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "duration",
+        "type": "uint256"
+      }
+    ],
+    "name": "setApprovalDeadline",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -825,11 +1130,11 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "newJudge",
+        "name": "newRegistry",
         "type": "address"
       }
     ],
-    "name": "setJudgeAddress",
+    "name": "setJudgeRegistry",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -845,6 +1150,45 @@
     "name": "setPlatformFee",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newReputation",
+        "type": "address"
+      }
+    ],
+    "name": "setReputationContract",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "duration",
+        "type": "uint256"
+      }
+    ],
+    "name": "setSubmissionDeadline",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "submissionDeadlineDuration",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {

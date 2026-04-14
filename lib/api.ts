@@ -151,19 +151,19 @@ async function apiFetch<T>(path: string, options: ApiOptions = {}): Promise<T> {
 // ─── Auth ─────────────────────────────────────────────────────
 
 export const authApi = {
-  /** get a nonce to sign */
-  getNonce(address: string): Promise<{ nonce: string; message: string }> {
+  /** get a nonce for SIWE message construction */
+  getNonce(address: string): Promise<{ nonce: string }> {
     return apiFetch(`/auth/nonce?address=${address}`, { auth: false });
   },
 
-  /** verify signature and get JWT */
+  /** verify SIWE message + signature and get JWT */
   verify(
-    address: string,
+    message: string,
     signature: string,
   ): Promise<{ token: string; address: string }> {
     return apiFetch("/auth/verify", {
       method: "POST",
-      body: JSON.stringify({ address, signature }),
+      body: JSON.stringify({ message, signature }),
       auth: false,
     });
   },
