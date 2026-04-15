@@ -13,7 +13,7 @@ import { useAccount, useConnectorClient, useDisconnect } from "wagmi";
 import { useInterwovenKit } from "@initia/interwovenkit-react";
 import { BrowserProvider, JsonRpcSigner } from "ethers";
 import { useAuth, type AuthState } from "@/hooks/useAuth";
-import { initiaEvm } from "@/lib/initia";
+import { activeChain } from "@/lib/initia";
 
 export type ConnectStep =
   | "idle"
@@ -158,7 +158,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       value={{
         address,
         signer,
-        chainId: String(initiaEvm.id),
+        chainId: String(activeChain.id),
         connectStep,
         isConnecting,
         isConnected: !!address && auth.isAuthenticated,
