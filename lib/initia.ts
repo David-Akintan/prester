@@ -44,12 +44,17 @@ const minitiaEvm = defineChain({
 });
 
 // Pick chain based on env
-const activeChain = chainId === minitiaEvm.id ? minitiaEvm : sepolia;
+const activeChain = (chainId === minitiaEvm.id ? minitiaEvm : sepolia) as
+  | typeof sepolia
+  | typeof minitiaEvm;
 
 export const wagmiConfig = createConfig({
   connectors: [initiaPrivyWalletConnector],
-  chains: [activeChain],
-  transports: { [activeChain.id]: http() },
+  chains: [sepolia, minitiaEvm],
+  transports: {
+    [sepolia.id]: http(),
+    [minitiaEvm.id]: http(),
+  },
 });
 
 export const queryClient = new QueryClient();
