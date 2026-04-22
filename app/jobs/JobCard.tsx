@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { formatEth, cn } from "@/lib/utils";
+import { getNativeSymbol } from "@/lib/chains";
 import { StatusBadge } from "@/app/components/ui/StatusBadge";
+import { ChainBadge } from "@/app/components/ui/ChainBadge";
 import type { JobRecord } from "@/lib/api";
 
 interface JobCardProps {
@@ -10,6 +12,7 @@ interface JobCardProps {
 
 export function JobCard({ job, className }: JobCardProps) {
   const totalEth = formatEth(BigInt(job.total_amount_wei));
+  const nativeSymbol = getNativeSymbol(job.chain_id);
   const postedAt = new Date(job.created_at).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -33,7 +36,8 @@ export function JobCard({ job, className }: JobCardProps) {
             <h3 className="text-lg font-semibold text-black group-hover:text-black line-clamp-2 transition-colors animate-slide-up flex-1 pr-2 leading-tight">
               {job.title}
             </h3>
-            <div className="animate-scale-in animation-delay-200 shrink-0">
+            <div className="flex flex-col items-end gap-1.5 animate-scale-in animation-delay-200 shrink-0">
+              <ChainBadge chainId={job.chain_id} />
               <StatusBadge status={job.status} className="shrink-0" />
             </div>
           </div>
@@ -87,7 +91,7 @@ export function JobCard({ job, className }: JobCardProps) {
                     Total
                   </span>
                   <span className="text-lg font-bold text-black group-hover/payment:scale-105 transition-transform">
-                    {totalEth} ETH
+                    {totalEth} {nativeSymbol}
                   </span>
                 </div>
 

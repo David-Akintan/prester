@@ -1,25 +1,31 @@
 "use client";
 
 import { useState } from "react";
+import { useChainId } from "wagmi";
 import { submitMilestone } from "@/lib/contracts";
 import { parseContractError } from "@/lib/utils";
-import type { MilestoneRecord } from "@/lib/api";
+import { milestonesApi, type MilestoneRecord } from "@/lib/api";
+import { ChainGuardedAction } from "@/app/components/ui/ChainGuardedAction";
 import type { JsonRpcSigner } from "ethers";
 
 interface Props {
   jobId: string;
   chainJobId: number | null;
+  jobChainId: number | null;
   milestone: MilestoneRecord;
   signer: JsonRpcSigner | null;
   onRefresh: () => Promise<void>;
 }
 
 export function SubmitDeliverableButton({
+  jobId,
   chainJobId,
+  jobChainId,
   milestone,
   signer,
   onRefresh,
 }: Props) {
+  const walletChainId = useChainId();
   const [uri, setUri] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -74,12 +80,24 @@ export function SubmitDeliverableButton({
     setSubmitting(true);
     setErr(null);
     try {
-      await submitMilestone(
+      const receipt = await submitMilestone(
         signer,
         BigInt(chainJobId),
         milestone.milestone_index,
         uri.trim(),
       );
+      try {
+        await milestonesApi.confirmSubmit(jobId, milestone.milestone_index, {
+          chain_id: walletChainId,
+          deliverable_uri: uri.trim(),
+          tx_hash: receipt.hash,
+        });
+      } catch (confirmErr) {
+        console.warn(
+          "[SubmitDeliverableButton] confirm-submit failed, listener will backstop:",
+          confirmErr,
+        );
+      }
       await onRefresh();
     } catch (e) {
       setErr(parseContractError(e));
@@ -99,13 +117,20 @@ export function SubmitDeliverableButton({
           className="flex-1 rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input)] px-4 py-2.5 text-sm text-fg placeholder-[var(--color-muted-foreground)] focus:border-[var(--color-ring)] focus:outline-none transition-colors"
           disabled={submitting}
         />
-        <button
-          onClick={handleSubmit}
-          disabled={!uri.trim() || submitting}
-          className="w-full sm:w-auto rounded-lg border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-6 py-2.5 text-sm font-semibold text-[var(--color-background)] transition-all hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {submitting ? "Submitting…" : "Submit Deliverable"}
-        </button>
+        <div className="w-full sm:w-auto">
+          <ChainGuardedAction
+            jobChainId={jobChainId}
+            label="Submit Deliverable"
+          >
+            <button
+              onClick={handleSubmit}
+              disabled={!uri.trim() || submitting}
+              className="w-full sm:w-auto rounded-lg border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-6 py-2.5 text-sm font-semibold text-[var(--color-background)] transition-all hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? "Submitting…" : "Submit Deliverable"}
+            </button>
+          </ChainGuardedAction>
+        </div>
       </div>
 
       {err && (

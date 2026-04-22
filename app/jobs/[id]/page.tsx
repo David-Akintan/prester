@@ -8,6 +8,7 @@ import { JobDetailSidebar } from "@/app/JobDetailSidebar";
 import { StatusBadge } from "@/app/components/ui/StatusBadge";
 import { JobRecord, jobsApi } from "@/lib/api";
 import { formatEth } from "@/lib/utils";
+import { getNativeSymbol } from "@/lib/chains";
 import { SubmitDeliverableButton } from "./_components/SubmitDeliverableButton";
 import { ClientMilestoneActions } from "./_components/ClientMilestoneActions";
 
@@ -176,7 +177,7 @@ export default function JobDetailPage({ params }: PageProps) {
               <Stat
                 icon={<CoinIcon />}
                 label="Payment"
-                value={`${formatEth(BigInt(job.total_amount_wei))} ETH`}
+                value={`${formatEth(BigInt(job.total_amount_wei))} ${getNativeSymbol(job.chain_id)}`}
               />
               <div className="hidden sm:block h-8 w-px bg-[var(--color-border-subtle)]" />
               <Stat
@@ -252,6 +253,7 @@ export default function JobDetailPage({ params }: PageProps) {
               <BidList
                 jobId={job.id}
                 chainJobId={job.chain_job_id}
+                jobChainId={job.chain_id}
                 bids={job.bids ?? []}
                 isClient={role === "client"}
                 jobStatus={job.status}
@@ -294,7 +296,8 @@ export default function JobDetailPage({ params }: PageProps) {
                       </div>
                       <div className="flex flex-col items-end gap-2 shrink-0">
                         <div className="font-mono text-sm font-bold text-fg">
-                          {formatEth(BigInt(m.amount_wei))} ETH
+                          {formatEth(BigInt(m.amount_wei))}{" "}
+                          {getNativeSymbol(job.chain_id)}
                         </div>
                         <StatusBadge status={m.status} />
                       </div>
@@ -306,6 +309,7 @@ export default function JobDetailPage({ params }: PageProps) {
                         <SubmitDeliverableButton
                           jobId={job.id}
                           chainJobId={job.chain_job_id}
+                          jobChainId={job.chain_id}
                           milestone={m}
                           signer={signer}
                           onRefresh={refresh}
@@ -329,7 +333,9 @@ export default function JobDetailPage({ params }: PageProps) {
                     {role === "client" && m.status !== "pending" && (
                       <div className="mt-4 pt-4 border-t border-subtle">
                         <ClientMilestoneActions
+                          jobId={job.id}
                           chainJobId={job.chain_job_id}
+                          jobChainId={job.chain_id}
                           milestone={m}
                           signer={signer}
                           onRefresh={refresh}

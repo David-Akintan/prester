@@ -18,6 +18,7 @@ type Tab = "posted" | "bids" | "freelancer";
 function bidRowToJob(row: FreelancerBidRow, address: string): JobRecord {
   return {
     id: row.id,
+    chain_id: row.chain_id,
     chain_job_id: row.chain_job_id,
     client_address: row.client_address,
     client_username: row.client_username,

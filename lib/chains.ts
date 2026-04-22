@@ -119,6 +119,16 @@ export function isSupportedChain(chainId: number | undefined): boolean {
   return chainId != null && chainId in CHAIN_REGISTRY;
 }
 
+// Native token symbol for a given chain (ETH, CELO, GAS…). Pulled from
+// viem's chain metadata. Falls back to "ETH" when the chain is unknown —
+// safer than crashing, and every UI callsite treats the symbol as a plain
+// label. Pair with `ethToWei` / `formatEth`, which operate on 18-decimal
+// native units and work for every EVM chain we support today.
+export function getNativeSymbol(chainId: number | null | undefined): string {
+  const meta = getChainMeta(chainId ?? undefined);
+  return meta?.viemChain.nativeCurrency.symbol ?? "ETH";
+}
+
 // Default chain for pre-wallet / SSR reads. Base mainnet is the production
 // default — cheapest L2 gas, widest wallet support. Clients should pass
 // `chainId` from wagmi (`useChainId()`) wherever possible rather than

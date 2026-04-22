@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useChainId } from "wagmi";
 import { useWallet } from "@/app/components/wallet/WalletContext";
 import { createJob } from "@/lib/contracts";
 import { jobsApi, ipfsApi } from "@/lib/api";
@@ -11,6 +12,7 @@ import {
   parseContractError,
   cn,
 } from "@/lib/utils";
+import { getNativeSymbol } from "@/lib/chains";
 import type { CreateJobFormData, MilestoneFormItem, TxState } from "@/index";
 import { isContractDeployed } from "@/lib/config";
 
@@ -50,6 +52,8 @@ const inputError = "border-black bg-neutral-50";
 
 export function CreateJobForm() {
   const router = useRouter();
+  const chainId = useChainId();
+  const nativeSymbol = getNativeSymbol(chainId);
   const { signer, isConnected, isAuthenticated } = useWallet();
   const [form, setForm] = useState<CreateJobFormData>({
     title: "",
@@ -188,7 +192,7 @@ export function CreateJobForm() {
 
       // 3. Send on-chain createJob transaction
 
-      if (isContractDeployed()) {
+      if (isContractDeployed(chainId)) {
         setTxState({
           status: "pending",
           message: "Confirm the transaction in your wallet…",
@@ -207,7 +211,12 @@ export function CreateJobForm() {
           status: "pending",
           message: "Confirming on-chain transaction…",
         });
-        await jobsApi.confirm(offchainJob.id, Number(jobId), metadataUri);
+        await jobsApi.confirm(
+          offchainJob.id,
+          Number(jobId),
+          chainId,
+          metadataUri,
+        );
 
         setTxState({
           status: "success",
@@ -471,12 +480,13 @@ export function CreateJobForm() {
 
                 <div>
                   <label className="mb-1.5 block text-xs font-semibold text-black uppercase tracking-widest">
-                    Amount (ETH) <span className="text-neutral-400">*</span>
+                    Amount ({nativeSymbol}){" "}
+                    <span className="text-neutral-400">*</span>
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <span className="text-neutral-400 text-xs font-mono">
-                        ETH
+                        {nativeSymbol}
                       </span>
                     </div>
                     <input
@@ -522,7 +532,7 @@ export function CreateJobForm() {
             <div className="text-right">
               <div className="text-2xl font-bold text-white font-mono">
                 {totalEth.toFixed(4)}{" "}
-                <span className="text-sm text-neutral-400">ETH</span>
+                <span className="text-sm text-neutral-400">{nativeSymbol}</span>
               </div>
             </div>
           </div>
@@ -621,7 +631,9 @@ export function CreateJobForm() {
             "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-black disabled:hover:text-white",
           )}
         >
-          {isPending ? "Processing…" : `Post Job — ${totalEth.toFixed(4)} ETH`}
+          {isPending
+            ? "Processing…"
+            : `Post Job — ${totalEth.toFixed(4)} ${nativeSymbol}`}
         </button>
       </div>
       {(!isConnected || !isAuthenticated) && (

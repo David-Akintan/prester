@@ -87,7 +87,7 @@ export default function JobsPage() {
           <p className="text-lg text-neutral-500 animate-slideUp animation-delay-200">
             {loading
               ? "Finding opportunities…"
-              : `${total} opportunity${total !== 1 ? "s" : ""} found`}
+              : `${total} ${total === 1 ? "opportunity" : "opportunities"} found`}
           </p>
         </div>
 

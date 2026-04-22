@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatEth, shortenAddress } from "@/lib/utils";
+import { getNativeSymbol } from "@/lib/chains";
+import { ChainGuardedAction } from "@/app/components/ui/ChainGuardedAction";
 import { StatusBadge } from "@/app/components/ui/StatusBadge";
 import { BidModal } from "@/app/jobs/BidModal";
 import { jobsApi, ApiError, type BidRecord } from "@/lib/api";
@@ -40,6 +42,7 @@ export function JobDetailSidebar({
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
   const totalEth = formatEth(BigInt(job.total_amount_wei));
+  const nativeSymbol = getNativeSymbol(job.chain_id);
   const milestoneCount = job.milestones?.length ?? 0;
 
   const approvedCount =
@@ -79,7 +82,7 @@ export function JobDetailSidebar({
       }
       await jobsApi.delete(job.id);
       setActionSuccess(
-        `Job cancelled. ${refundAfterFeeEth} ETH refunded to your wallet.`,
+        `Job cancelled. ${refundAfterFeeEth} ${nativeSymbol} refunded to your wallet.`,
       );
       setTimeout(() => router.push("/dashboard"), 2000);
     } catch (err) {
@@ -122,7 +125,9 @@ export function JobDetailSidebar({
 
           <p className="mb-1 text-3xl font-bold text-fg">
             {totalEth}
-            <span className="ml-1.5 text-base font-medium text-muted">ETH</span>
+            <span className="ml-1.5 text-base font-medium text-muted">
+              {nativeSymbol}
+            </span>
           </p>
 
           {milestoneCount > 0 && (
@@ -187,12 +192,14 @@ export function JobDetailSidebar({
             isAuthenticated &&
             job.status === "open" &&
             !myBid && (
-              <button
-                onClick={() => setShowBidModal(true)}
-                className="w-full rounded-lg border border-[var(--color-foreground)] bg-[var(--color-foreground)] py-2.5 text-sm font-semibold text-[var(--color-background)] transition hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] cursor-pointer"
-              >
-                Place a Bid
-              </button>
+              <ChainGuardedAction jobChainId={job.chain_id} label="Place a Bid">
+                <button
+                  onClick={() => setShowBidModal(true)}
+                  className="w-full rounded-lg border border-[var(--color-foreground)] bg-[var(--color-foreground)] py-2.5 text-sm font-semibold text-[var(--color-background)] transition hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] cursor-pointer"
+                >
+                  Place a Bid
+                </button>
+              </ChainGuardedAction>
             )}
 
           {role === "visitor" && myBid && myBid.status === "pending" && (
@@ -266,12 +273,14 @@ export function JobDetailSidebar({
           )}
 
           {role === "client" && job.status === "open" && job.chain_job_id && (
-            <button
-              onClick={() => setShowCancelConfirm(true)}
-              className="w-full border border-default bg-surface px-4 py-2.5 text-sm font-medium text-fg rounded-lg transition-all hover:border-[var(--color-foreground)] hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)]"
-            >
-              Cancel Job
-            </button>
+            <ChainGuardedAction jobChainId={job.chain_id} label="Cancel Job">
+              <button
+                onClick={() => setShowCancelConfirm(true)}
+                className="w-full border border-default bg-surface px-4 py-2.5 text-sm font-medium text-fg rounded-lg transition-all hover:border-[var(--color-foreground)] hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)]"
+              >
+                Cancel Job
+              </button>
+            </ChainGuardedAction>
           )}
 
           {role === "client" && job.status === "in_progress" && (
@@ -342,7 +351,8 @@ export function JobDetailSidebar({
           <div className="px-6 py-4">
             <p className="text-sm text-muted mb-4">
               Are you sure you want to cancel this job? This action cannot be
-              undone and will refund your ETH with a cancellation fee.
+              undone and will refund your {nativeSymbol} with a cancellation
+              fee.
             </p>
 
             <div className="rounded-lg border border-default bg-muted p-4 space-y-3">
@@ -350,18 +360,20 @@ export function JobDetailSidebar({
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted">Total locked</span>
-                  <span className="font-medium text-fg">{totalEth} ETH</span>
+                  <span className="font-medium text-fg">
+                    {totalEth} {nativeSymbol}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted">Cancellation fee (5%)</span>
                   <span className="font-medium text-fg">
-                    − {cancellationFeeEth} ETH
+                    − {cancellationFeeEth} {nativeSymbol}
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-subtle pt-2">
                   <span className="font-semibold text-fg">You receive</span>
                   <span className="font-bold text-fg">
-                    {refundAfterFeeEth} ETH
+                    {refundAfterFeeEth} {nativeSymbol}
                   </span>
                 </div>
               </div>

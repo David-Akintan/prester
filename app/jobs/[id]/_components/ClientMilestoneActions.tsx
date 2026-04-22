@@ -1,24 +1,35 @@
 "use client";
 
 import { useState } from "react";
+import { useChainId } from "wagmi";
 import { approveMilestone, raiseDispute } from "@/lib/contracts";
 import { parseContractError } from "@/lib/utils";
-import type { MilestoneRecord } from "@/lib/api";
+import {
+  milestonesApi,
+  disputesApi,
+  type MilestoneRecord,
+} from "@/lib/api";
+import { ChainGuardedAction } from "@/app/components/ui/ChainGuardedAction";
 import type { JsonRpcSigner } from "ethers";
 
 interface Props {
+  jobId: string;
   chainJobId: number | null;
+  jobChainId: number | null;
   milestone: MilestoneRecord;
   signer: JsonRpcSigner | null;
   onRefresh: () => Promise<void>;
 }
 
 export function ClientMilestoneActions({
+  jobId,
   chainJobId,
+  jobChainId,
   milestone,
   signer,
   onRefresh,
 }: Props) {
+  const walletChainId = useChainId();
   const [loading, setLoading] = useState<"approve" | "dispute" | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -47,18 +58,42 @@ export function ClientMilestoneActions({
     setLoading(action);
     setErr(null);
     try {
+      let receipt;
       if (action === "approve") {
-        await approveMilestone(
+        receipt = await approveMilestone(
           signer,
           BigInt(chainJobId),
           milestone.milestone_index,
         );
+        try {
+          await milestonesApi.confirmApprove(
+            jobId,
+            milestone.milestone_index,
+            { chain_id: walletChainId, tx_hash: receipt.hash },
+          );
+        } catch (confirmErr) {
+          console.warn(
+            "[ClientMilestoneActions] confirm-approve failed, listener will backstop:",
+            confirmErr,
+          );
+        }
       } else {
-        await raiseDispute(
+        receipt = await raiseDispute(
           signer,
           BigInt(chainJobId),
           milestone.milestone_index,
         );
+        try {
+          await disputesApi.confirmRaise(jobId, milestone.milestone_index, {
+            chain_id: walletChainId,
+            tx_hash: receipt.hash,
+          });
+        } catch (confirmErr) {
+          console.warn(
+            "[ClientMilestoneActions] confirm-dispute failed, listener will backstop:",
+            confirmErr,
+          );
+        }
       }
       await onRefresh();
     } catch (e) {
@@ -95,20 +130,32 @@ export function ClientMilestoneActions({
       </div>
       {err && <p className="text-xs text-muted">{err}</p>}
       <div className="flex flex-col sm:flex-row gap-2">
-        <button
-          onClick={() => handle("approve")}
-          disabled={!!loading}
-          className="flex-1 border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-4 py-2.5 text-xs font-medium uppercase tracking-widest text-[var(--color-background)] rounded-lg transition hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] disabled:opacity-40"
+        <ChainGuardedAction
+          jobChainId={jobChainId}
+          label="Approve & Release"
+          containerClassName="flex-1"
         >
-          {loading === "approve" ? "Approving…" : "Approve & Release"}
-        </button>
-        <button
-          onClick={() => handle("dispute")}
-          disabled={!!loading}
-          className="flex-1 border border-[var(--color-foreground)] px-4 py-2.5 text-xs font-medium uppercase tracking-widest text-fg rounded-lg transition hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)] disabled:opacity-40"
+          <button
+            onClick={() => handle("approve")}
+            disabled={!!loading}
+            className="w-full border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-4 py-2.5 text-xs font-medium uppercase tracking-widest text-[var(--color-background)] rounded-lg transition hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] disabled:opacity-40"
+          >
+            {loading === "approve" ? "Approving…" : "Approve & Release"}
+          </button>
+        </ChainGuardedAction>
+        <ChainGuardedAction
+          jobChainId={jobChainId}
+          label="Raise Dispute"
+          containerClassName="flex-1"
         >
-          {loading === "dispute" ? "Raising…" : "Raise Dispute"}
-        </button>
+          <button
+            onClick={() => handle("dispute")}
+            disabled={!!loading}
+            className="w-full border border-[var(--color-foreground)] px-4 py-2.5 text-xs font-medium uppercase tracking-widest text-fg rounded-lg transition hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)] disabled:opacity-40"
+          >
+            {loading === "dispute" ? "Raising…" : "Raise Dispute"}
+          </button>
+        </ChainGuardedAction>
       </div>
     </div>
   );

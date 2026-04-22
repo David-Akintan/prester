@@ -228,6 +228,7 @@ export interface JobListResponse {
 
 export interface JobRecord {
   id: string;
+  chain_id: number | null;
   chain_job_id: number | null;
   client_address: string;
   client_username: string | null;
@@ -324,12 +325,14 @@ export const jobsApi = {
   confirm(
     id: string,
     chainJobId: number,
+    chainId: number,
     metadataUri?: string,
   ): Promise<JobRecord> {
     return apiFetch(`/jobs/${id}/confirm`, {
       method: "PATCH",
       body: JSON.stringify({
         chain_job_id: chainJobId,
+        chain_id: chainId,
         metadata_uri: metadataUri,
       }),
     });
@@ -355,9 +358,18 @@ export const bidsApi = {
     });
   },
 
-  accept(jobId: string, bidId: string): Promise<{ bid: BidRecord }> {
-    return apiFetch(`/jobs/${jobId}/bids/${bidId}/accept`, {
+  // Called right after the client's on-chain acceptBid() tx confirms.
+  // Flips bid→accepted, siblings→rejected, job→in_progress without waiting
+  // for the chain listener.
+  confirmAccept(
+    jobId: string,
+    bidId: string,
+    chainId: number,
+    txHash?: string,
+  ): Promise<{ bid: BidRecord }> {
+    return apiFetch(`/jobs/${jobId}/bids/${bidId}/confirm-accept`, {
       method: "POST",
+      body: JSON.stringify({ chain_id: chainId, tx_hash: txHash }),
     });
   },
 
@@ -368,6 +380,47 @@ export const bidsApi = {
   ): Promise<BidRecord> {
     return apiFetch(`/jobs/${jobId}/bids/${bidId}`, {
       method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+};
+
+// ─── Milestones ───────────────────────────────────────────────
+
+export const milestonesApi = {
+  confirmSubmit(
+    jobId: string,
+    index: number,
+    payload: { chain_id: number; deliverable_uri: string; tx_hash?: string },
+  ): Promise<{ milestone: MilestoneRecord }> {
+    return apiFetch(`/jobs/${jobId}/milestones/${index}/confirm-submit`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  confirmApprove(
+    jobId: string,
+    index: number,
+    payload: { chain_id: number; tx_hash?: string },
+  ): Promise<{ milestone: MilestoneRecord; completed: boolean }> {
+    return apiFetch(`/jobs/${jobId}/milestones/${index}/confirm-approve`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+};
+
+// ─── Disputes ─────────────────────────────────────────────────
+
+export const disputesApi = {
+  confirmRaise(
+    jobId: string,
+    index: number,
+    payload: { chain_id: number; tx_hash?: string },
+  ): Promise<{ disputeCreated: boolean }> {
+    return apiFetch(`/jobs/${jobId}/milestones/${index}/confirm-dispute`, {
+      method: "POST",
       body: JSON.stringify(payload),
     });
   },

@@ -1,14 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ApiError, type BidRecord } from "@/lib/api";
+import { useChainId } from "wagmi";
+import { ApiError, bidsApi, type BidRecord } from "@/lib/api";
 import { acceptBid } from "@/lib/contracts";
 import { shortenAddress, parseContractError, cn } from "@/lib/utils";
+import { ChainGuardedAction } from "@/app/components/ui/ChainGuardedAction";
 import type { JsonRpcSigner } from "ethers";
 
 interface BidListProps {
   jobId: string;
   chainJobId: number | null;
+  jobChainId: number | null;
   bids: BidRecord[];
   isClient: boolean;
   jobStatus: string;
@@ -19,12 +22,14 @@ interface BidListProps {
 export function BidList({
   jobId,
   chainJobId,
+  jobChainId,
   bids,
   isClient,
   jobStatus,
   signer,
   onRefresh,
 }: BidListProps) {
+  const walletChainId = useChainId();
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [selectedBid, setSelectedBid] = useState<BidRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,15 +43,27 @@ export function BidList({
 
     try {
       // On-chain: assign freelancer via escrow contract.
-      // The backend chain listener handles DB sync when it sees BidAccepted.
-      await acceptBid(signer, BigInt(chainJobId), bid.freelancer_address);
-
-      setSuccessMsg(
-        `Bid accepted! ${bid.username ?? shortenAddress(bid.freelancer_address)} is now assigned. Syncing…`,
+      const receipt = await acceptBid(
+        signer,
+        BigInt(chainJobId),
+        bid.freelancer_address,
       );
 
-      // Give the chain listener a moment to process the event before refreshing
-      await new Promise((r) => setTimeout(r, 3_000));
+      // Authoritative DB sync via confirm endpoint — doesn't rely on the
+      // listener catching the event. The listener still runs as a backstop.
+      try {
+        await bidsApi.confirmAccept(jobId, bid.id, walletChainId, receipt.hash);
+      } catch (confirmErr) {
+        console.warn(
+          "[BidList] confirm-accept failed, falling back to listener:",
+          confirmErr,
+        );
+      }
+
+      setSuccessMsg(
+        `Bid accepted! ${bid.username ?? shortenAddress(bid.freelancer_address)} is now assigned.`,
+      );
+
       await onRefresh();
       setSelectedBid(null);
     } catch (err) {
@@ -362,15 +379,21 @@ export function BidList({
                   selectedBid.status === "pending" &&
                   !!signer &&
                   !!chainJobId && (
-                    <button
-                      onClick={() => handleAccept(selectedBid)}
-                      disabled={!!acceptingId}
-                      className="rounded-lg border border-black bg-black px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                    <ChainGuardedAction
+                      jobChainId={jobChainId}
+                      label="Accept Bid"
+                      containerClassName="w-full"
                     >
-                      {acceptingId === selectedBid.id
-                        ? "Accepting…"
-                        : "Accept Bid"}
-                    </button>
+                      <button
+                        onClick={() => handleAccept(selectedBid)}
+                        disabled={!!acceptingId}
+                        className="rounded-lg border border-black bg-black px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-white hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {acceptingId === selectedBid.id
+                          ? "Accepting…"
+                          : "Accept Bid"}
+                      </button>
+                    </ChainGuardedAction>
                   )}
               </div>
             </div>
