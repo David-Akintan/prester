@@ -8,8 +8,49 @@ import { JobCard } from "@/app/jobs/JobCard";
 import { shortenAddress, formatEth } from "@/lib/utils";
 import { useState } from "react";
 import React from "react";
+import type { JobRecord, FreelancerBidRow } from "@/lib/api";
 
 type Tab = "posted" | "bids" | "freelancer";
+
+// Coerce a FreelancerBidRow into a JobCard-compatible JobRecord. The
+// bids[] array is synthesized from the user's own bid so the existing
+// badge logic continues to work without refactoring the card component.
+function bidRowToJob(row: FreelancerBidRow, address: string): JobRecord {
+  return {
+    id: row.id,
+    chain_job_id: row.chain_job_id,
+    client_address: row.client_address,
+    client_username: row.client_username,
+    client_avatar: row.client_avatar,
+    title: row.title,
+    description: row.description,
+    category: null,
+    tags: [],
+    required_skills: [],
+    estimated_duration: null,
+    metadata_uri: null,
+    total_amount_wei: row.total_amount_wei,
+    status: row.status,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    milestones: [],
+    bids: [
+      {
+        id: row.bid_id,
+        job_id: row.id,
+        freelancer_address: address,
+        username: null,
+        avatar_url: null,
+        cover_letter: row.cover_letter,
+        proposed_timeline: row.proposed_timeline,
+        has_been_edited: false,
+        status: row.bid_status,
+        created_at: row.bid_created_at,
+      },
+    ],
+    disputes: [],
+  };
+}
 
 export default function DashboardPage() {
   const { address, isConnected, isAuthenticated, connect, isConnecting } =
@@ -24,13 +65,7 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<Tab>("posted");
 
   // Determine if user is primarily a freelancer (has accepted bids)
-  const hasAcceptedBids = activeBids.some((job) =>
-    job.bids?.some(
-      (b) =>
-        b.freelancer_address.toLowerCase() === address?.toLowerCase() &&
-        b.status === "accepted",
-    ),
-  );
+  const hasAcceptedBids = activeBids.some((b) => b.bid_status === "accepted");
 
   // Auto-select appropriate tab
   React.useEffect(() => {
@@ -80,21 +115,8 @@ export default function DashboardPage() {
     .filter((j) => j.status === "open" || j.status === "in_progress")
     .reduce((sum, j) => sum + BigInt(j.total_amount_wei), 0n);
 
-  const pendingBids = activeBids.filter((j) =>
-    j.bids?.some(
-      (b) =>
-        b.freelancer_address.toLowerCase() === address?.toLowerCase() &&
-        b.status === "pending",
-    ),
-  ).length;
-
-  const acceptedBids = activeBids.filter((j) =>
-    j.bids?.some(
-      (b) =>
-        b.freelancer_address.toLowerCase() === address?.toLowerCase() &&
-        b.status === "accepted",
-    ),
-  ).length;
+  const pendingBids = activeBids.filter((b) => b.bid_status === "pending").length;
+  const acceptedBids = activeBids.filter((b) => b.bid_status === "accepted").length;
 
   return (
     <div className="space-y-8">
@@ -394,34 +416,28 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {activeBids.map((job) => {
-                    const myBid = job.bids?.find(
-                      (b) =>
-                        b.freelancer_address.toLowerCase() ===
-                        address?.toLowerCase(),
-                    );
+                  {activeBids.map((row) => {
+                    const job = bidRowToJob(row, address!);
                     return (
-                      <div key={job.id} className="relative">
+                      <div key={row.bid_id} className="relative">
                         <JobCard job={job} />
-                        {myBid && (
-                          <div className="absolute top-3 right-3">
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                                myBid.status === "accepted"
-                                  ? "bg-green-100 text-green-700"
-                                  : myBid.status === "rejected"
-                                    ? "bg-gray-100 text-gray-500"
-                                    : "bg-amber-100 text-amber-700"
-                              }`}
-                            >
-                              {myBid.status === "accepted"
-                                ? "✓ Accepted"
-                                : myBid.status === "rejected"
-                                  ? "Rejected"
-                                  : "Pending"}
-                            </span>
-                          </div>
-                        )}
+                        <div className="absolute top-3 right-3">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                              row.bid_status === "accepted"
+                                ? "bg-green-100 text-green-700"
+                                : row.bid_status === "rejected"
+                                  ? "bg-gray-100 text-gray-500"
+                                  : "bg-amber-100 text-amber-700"
+                            }`}
+                          >
+                            {row.bid_status === "accepted"
+                              ? "✓ Accepted"
+                              : row.bid_status === "rejected"
+                                ? "Rejected"
+                                : "Pending"}
+                          </span>
+                        </div>
                       </div>
                     );
                   })}

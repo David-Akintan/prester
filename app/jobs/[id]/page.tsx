@@ -1,10 +1,10 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useWallet } from "@/app/components/wallet/WalletContext";
 import { BidList } from "@/app/jobs/BidList";
-import { JobDetailSidebar } from "@/app/Jobdetailsidebar";
+import { JobDetailSidebar } from "@/app/JobDetailSidebar";
 import { StatusBadge } from "@/app/components/ui/StatusBadge";
 import { JobRecord, jobsApi } from "@/lib/api";
 import { formatEth } from "@/lib/utils";
@@ -23,6 +23,16 @@ export default function JobDetailPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Mirror the latest job in a ref so the polling effect can inspect
+  // current state without re-subscribing on every field change. Prior
+  // shape (two effects, deps on job.milestones/job.disputes.length) tore
+  // down and rebuilt the interval on every silentRefresh — the interval
+  // count could stack if React re-ran the effect while a tick was in flight.
+  const jobRef = useRef<JobRecord | null>(null);
+  useEffect(() => {
+    jobRef.current = job;
+  }, [job]);
+
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
@@ -40,20 +50,42 @@ export default function JobDetailPage({ params }: PageProps) {
     refresh();
   }, [refresh]);
 
-  const silentRefresh = useCallback(async () => {
-    try {
-      const jobData = await jobsApi.get(id);
-      setJob(jobData);
-    } catch {
-      // Silent poll — don't surface errors
-    }
-  }, [id]);
-
+  // Single consolidated poll. Runs continuously while the page is mounted
+  // and decides per-tick what to do based on jobRef.current.status. No
+  // dependencies on job fields → the interval is created exactly once
+  // per [id], and the cleanup on unmount / navigation guarantees a clean
+  // teardown even if a tick is mid-flight.
   useEffect(() => {
-    if (!job || job.status !== "in_progress") return;
-    const interval = setInterval(silentRefresh, 15_000);
+    let ticks = 0;
+    const VERDICT_WAIT_MAX = 6; // ~30s at 5s cadence
+
+    const interval = setInterval(async () => {
+      const current = jobRef.current;
+      if (!current) return;
+
+      const needsInProgressPoll = current.status === "in_progress";
+      const hasResolvedMilestone = current.milestones?.some(
+        (m) => m.status === "resolved",
+      );
+      const needsVerdictWait =
+        current.status === "completed" &&
+        hasResolvedMilestone &&
+        (current.disputes?.length ?? 0) === 0 &&
+        ticks < VERDICT_WAIT_MAX;
+
+      if (!needsInProgressPoll && !needsVerdictWait) return;
+
+      ticks += 1;
+      try {
+        const jobData = await jobsApi.get(id);
+        setJob(jobData);
+      } catch {
+        // Silent — don't surface poll errors
+      }
+    }, 5_000);
+
     return () => clearInterval(interval);
-  }, [job?.status, silentRefresh]);
+  }, [id]);
 
   const role: "client" | "freelancer" | "visitor" = (() => {
     if (!address || !job) return "visitor";

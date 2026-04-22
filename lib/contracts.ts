@@ -1,18 +1,29 @@
 import { ethers, BrowserProvider, JsonRpcSigner } from "ethers";
 import FreelanceEscrowABI from "./abis/FreelanceEscrow.json";
-import { config, isContractDeployed } from "./config";
+import { getContractAddresses } from "./addresses";
+import { CHAIN_REGISTRY, DEFAULT_CHAIN_ID } from "./chains";
 import type { Job, Milestone, JobStatus, MilestoneStatus } from "@/index";
 
 // ─────────────────────────────────────────────────────────────
 // Provider helpers
 // ─────────────────────────────────────────────────────────────
 
+function rpcFor(chainId: number): string {
+  const meta = CHAIN_REGISTRY[chainId];
+  if (!meta) {
+    throw new Error(`Unsupported chainId: ${chainId}`);
+  }
+  return meta.viemChain.rpcUrls.default.http[0];
+}
+
 /**
- * Returns a read-only provider connected to the configured Ethereum RPC.
- * Used for data fetching that doesn't require a wallet.
+ * Returns a read-only provider for a given chain.
+ * Falls back to DEFAULT_CHAIN_ID when called without arguments so
+ * server-side / pre-wallet reads still work.
  */
-export function getReadProvider(): ethers.JsonRpcProvider {
-  return new ethers.JsonRpcProvider(config.chain.rpcUrl);
+export function getReadProvider(chainId?: number): ethers.JsonRpcProvider {
+  const id = chainId ?? DEFAULT_CHAIN_ID;
+  return new ethers.JsonRpcProvider(rpcFor(id));
 }
 
 /**
@@ -33,39 +44,40 @@ export function getWalletProvider(): BrowserProvider {
 // Contract instances
 // ─────────────────────────────────────────────────────────────
 
-/** Read-only escrow contract instance (no signer required) */
+/**
+ * Read-only (or signer-bound) escrow contract instance for a given chain.
+ * When a signer is passed the chain is inferred from the signer's provider
+ * so writes always go to the chain the wallet is on.
+ */
 export function getEscrowContract(
   signerOrProvider?: ethers.Signer | ethers.Provider,
+  chainId?: number,
 ): ethers.Contract {
-  // FIX: Guard against empty/missing escrow address before ethers throws an
-  // opaque error. This is the most common cause of "Transaction failed"
-  // with no wallet popup — the address env var is missing or empty.
-  if (!isContractDeployed()) {
+  const resolvedChainId = chainId ?? DEFAULT_CHAIN_ID;
+  let addr: string;
+  try {
+    addr = getContractAddresses(resolvedChainId).FreelanceEscrow;
+  } catch (err) {
     throw new Error(
-      "Escrow contract address is not configured. " +
-        "Set NEXT_PUBLIC_ESCROW_ADDRESS in your .env.local file.",
+      `Escrow contract not deployed on chainId ${resolvedChainId}. ` +
+        `Run \`npx hardhat run scripts/deploy.ts --network <name>\` first.`,
     );
   }
-  if (!ethers.isAddress(config.contracts.escrowAddress)) {
+  if (!ethers.isAddress(addr)) {
     throw new Error(
-      `Invalid escrow contract address: "${config.contracts.escrowAddress}". ` +
-        "Check NEXT_PUBLIC_ESCROW_ADDRESS in your .env.local file.",
+      `Invalid escrow address "${addr}" for chainId ${resolvedChainId}.`,
     );
   }
-  const provider = signerOrProvider ?? getReadProvider();
-  return new ethers.Contract(
-    config.contracts.escrowAddress,
-    FreelanceEscrowABI,
-    provider,
-  );
+  const provider = signerOrProvider ?? getReadProvider(resolvedChainId);
+  return new ethers.Contract(addr, FreelanceEscrowABI, provider);
 }
 // ─────────────────────────────────────────────────────────────
 // Read functions
 // ─────────────────────────────────────────────────────────────
 
 /** Fetch a single job with all its milestones */
-export async function fetchJob(jobId: bigint): Promise<Job> {
-  const contract = getEscrowContract();
+export async function fetchJob(jobId: bigint, chainId?: number): Promise<Job> {
+  const contract = getEscrowContract(undefined, chainId);
   const [
     client,
     freelancer,
@@ -105,13 +117,13 @@ export async function fetchJob(jobId: bigint): Promise<Job> {
   };
 }
 /** Fetch multiple jobs by IDs */
-export async function fetchJobs(ids: bigint[]): Promise<Job[]> {
-  return Promise.all(ids.map(fetchJob));
+export async function fetchJobs(ids: bigint[], chainId?: number): Promise<Job[]> {
+  return Promise.all(ids.map((id) => fetchJob(id, chainId)));
 }
 
 /** Fetch the total number of jobs created (useful for paginating) */
-export async function fetchJobCount(): Promise<bigint> {
-  const contract = getEscrowContract();
+export async function fetchJobCount(chainId?: number): Promise<bigint> {
+  const contract = getEscrowContract(undefined, chainId);
   return contract.jobCount() as Promise<bigint>;
 }
 
@@ -130,12 +142,17 @@ export interface CreateJobParams {
 export async function createJob(
   signer: JsonRpcSigner,
   params: CreateJobParams,
+  chainId?: number,
 ): Promise<{ receipt: ethers.TransactionReceipt; jobId: bigint }> {
-  const contract = getEscrowContract(signer);
+  const resolvedChainId =
+    chainId ?? Number((await signer.provider!.getNetwork()).chainId);
+  const contract = getEscrowContract(signer, resolvedChainId);
 
-  // FIX: Log what we're sending so it's visible in the console if it fails.
-  // This makes it immediately obvious if the address, value, or args are wrong.
-  console.log("[createJob] contract address:", config.contracts.escrowAddress);
+  console.log("[createJob] chainId:", resolvedChainId);
+  console.log(
+    "[createJob] contract address:",
+    getContractAddresses(resolvedChainId).FreelanceEscrow,
+  );
   console.log("[createJob] metadataUri:", params.metadataUri);
   console.log(
     "[createJob] milestoneDescriptions:",
@@ -179,13 +196,23 @@ export async function createJob(
   return { receipt, jobId };
 }
 
+async function contractForSigner(
+  signer: JsonRpcSigner,
+  chainId?: number,
+): Promise<ethers.Contract> {
+  const resolved =
+    chainId ?? Number((await signer.provider!.getNetwork()).chainId);
+  return getEscrowContract(signer, resolved);
+}
+
 /** Accept a freelancer bid */
 export async function acceptBid(
   signer: JsonRpcSigner,
   jobId: bigint,
   freelancerAddress: string,
+  chainId?: number,
 ): Promise<ethers.TransactionReceipt> {
-  const contract = getEscrowContract(signer);
+  const contract = await contractForSigner(signer, chainId);
   const tx = await contract.acceptBid(jobId, freelancerAddress);
   return tx.wait();
 }
@@ -196,8 +223,9 @@ export async function submitMilestone(
   jobId: bigint,
   milestoneIndex: number,
   deliverableUri: string,
+  chainId?: number,
 ): Promise<ethers.TransactionReceipt> {
-  const contract = getEscrowContract(signer);
+  const contract = await contractForSigner(signer, chainId);
   const tx = await contract.submitMilestone(
     jobId,
     milestoneIndex,
@@ -211,8 +239,9 @@ export async function approveMilestone(
   signer: JsonRpcSigner,
   jobId: bigint,
   milestoneIndex: number,
+  chainId?: number,
 ): Promise<ethers.TransactionReceipt> {
-  const contract = getEscrowContract(signer);
+  const contract = await contractForSigner(signer, chainId);
   const tx = await contract.approveMilestone(jobId, milestoneIndex);
   return tx.wait();
 }
@@ -222,8 +251,9 @@ export async function raiseDispute(
   signer: JsonRpcSigner,
   jobId: bigint,
   milestoneIndex: number,
+  chainId?: number,
 ): Promise<ethers.TransactionReceipt> {
-  const contract = getEscrowContract(signer);
+  const contract = await contractForSigner(signer, chainId);
   const tx = await contract.raiseDispute(jobId, milestoneIndex);
   return tx.wait();
 }
@@ -232,8 +262,9 @@ export async function raiseDispute(
 export async function cancelJob(
   signer: JsonRpcSigner,
   jobId: bigint,
+  chainId?: number,
 ): Promise<ethers.TransactionReceipt> {
-  const contract = getEscrowContract(signer);
+  const contract = await contractForSigner(signer, chainId);
   const tx = await contract.cancelJob(jobId);
   return tx.wait();
 }

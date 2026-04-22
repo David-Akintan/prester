@@ -1,62 +1,85 @@
 /**
  * Central configuration for the Prester frontend.
- * Uses deployed contract addresses directly to avoid environment variable timing issues.
+ *
+ * Chain-agnostic: contract addresses and chain metadata are looked up
+ * per `chainId`. Components should prefer `useChainContracts()` from
+ * `@/lib/chainStore` over the deprecated `config.contracts` alias.
  */
 
-import { CONTRACT_ADDRESSES } from "./addresses";
+import {
+  CONTRACT_ADDRESSES_BY_CHAIN,
+  getContractAddresses,
+  CONTRACT_ADDRESSES,
+} from "./addresses";
+import { CHAIN_REGISTRY, getChainMeta, DEFAULT_CHAIN_ID } from "./chains";
 
-// Supported networks — swap NEXT_PUBLIC_CHAIN to switch
-// "1"        = Ethereum Mainnet
-// "11155111" = Sepolia Testnet  ← default for development
-export const SUPPORTED_CHAINS: Record<
-  string,
-  { name: string; rpcUrl: string }
-> = {
-  "1": {
-    name: "Ethereum Mainnet",
-    rpcUrl:
-      process.env.NEXT_PUBLIC_MAINNET_RPC_URL ?? "https://eth.llamarpc.com",
-  },
-  "11155111": {
-    name: "Sepolia Testnet",
-    rpcUrl:
-      process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL ?? "https://rpc.sepolia.org",
-  },
-  "2594729740794688": {
-    name: "MiniEVM Testnet",
-    rpcUrl: "https://jsonrpc-evm-1.anvil.asia-southeast.initia.xyz",
-  },
-};
+// Rebuild the old `SUPPORTED_CHAINS` shape from the new registry so any
+// call-sites that still use it keep working during migration.
+export const SUPPORTED_CHAINS: Record<string, { name: string; rpcUrl: string }> =
+  Object.fromEntries(
+    Object.entries(CHAIN_REGISTRY).map(([id, meta]) => [
+      id,
+      {
+        name: meta.name,
+        rpcUrl: meta.viemChain.rpcUrls.default.http[0],
+      },
+    ]),
+  );
 
-const chainId = process.env.NEXT_PUBLIC_CHAIN_ID ?? "11155111";
+/**
+ * Returns the contract addresses for a given chain.
+ * Throws if the chain is not in the registry / not deployed to.
+ */
+export function getContracts(chainId: number) {
+  return getContractAddresses(chainId);
+}
+
+/**
+ * Chain metadata (name, explorer, native currency, …) for a given chain.
+ * Returns null for unsupported chains so callers can render a fallback UI.
+ */
+export function getChain(chainId: number) {
+  return getChainMeta(chainId);
+}
+
+export const ipfsGateway =
+  process.env.NEXT_PUBLIC_IPFS_GATEWAY ?? "https://ipfs.io/ipfs/";
+
+/** Convert an IPFS URI (ipfs://…) to an HTTP URL via the gateway */
+export function ipfsToHttp(uri: string): string {
+  if (uri.startsWith("ipfs://")) {
+    return uri.replace("ipfs://", ipfsGateway);
+  }
+  return uri;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Deprecated `config` export — kept so existing imports compile.
+// New code should use getContracts(chainId) + getChain(chainId).
+// ─────────────────────────────────────────────────────────────
+
+const defaultMeta = getChainMeta(DEFAULT_CHAIN_ID);
 
 export const config = {
   contracts: {
     escrowAddress: CONTRACT_ADDRESSES.FreelanceEscrow,
     reputationAddress: CONTRACT_ADDRESSES.Reputation,
+    judgeRegistryAddress: CONTRACT_ADDRESSES.JudgeRegistry,
   },
 
   chain: {
-    chainId,
-    chainIdHex: `0x${parseInt(chainId).toString(16)}`,
-    name: SUPPORTED_CHAINS[chainId]?.name ?? "Sepolia Testnet",
-    rpcUrl: SUPPORTED_CHAINS[chainId]?.rpcUrl ?? "https://rpc.sepolia.org",
+    chainId: String(DEFAULT_CHAIN_ID),
+    chainIdHex: `0x${DEFAULT_CHAIN_ID.toString(16)}`,
+    name: defaultMeta?.name ?? "Unknown",
+    rpcUrl: defaultMeta?.viemChain.rpcUrls.default.http[0] ?? "",
   },
 
   ipfs: {
-    gateway: process.env.NEXT_PUBLIC_IPFS_GATEWAY ?? "https://ipfs.io/ipfs/",
+    gateway: ipfsGateway,
   },
 } as const;
 
-export function isContractDeployed(): boolean {
-  // Using hardcoded deployed addresses, so always return true
-  return true;
-}
-
-/** Convert an IPFS URI (ipfs://...) to an HTTP URL via the gateway */
-export function ipfsToHttp(uri: string): string {
-  if (uri.startsWith("ipfs://")) {
-    return uri.replace("ipfs://", config.ipfs.gateway);
-  }
-  return uri;
+export function isContractDeployed(chainId?: number): boolean {
+  const id = chainId ?? DEFAULT_CHAIN_ID;
+  return id in CONTRACT_ADDRESSES_BY_CHAIN;
 }

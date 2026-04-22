@@ -7,16 +7,17 @@ import {
   type ConnectStep,
 } from "@/app/components/wallet/WalletContext";
 import { shortenAddress, cn } from "@/lib/utils";
-import { config } from "@/lib/config";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useEffect, useState } from "react";
-import { useInterwovenKit } from "@initia/interwovenkit-react";
 import { ThemeToggle } from "@/app/components/theme/ThemeToggle";
+import ChainSwitcher from "@/app/components/layout/ChainSwitcher";
+import FundWalletButton from "@/app/components/wallet/FundWalletButton";
+import { getChainMeta } from "@/lib/chains";
 
 const STEP_LABEL: Record<ConnectStep, string> = {
   idle: "Connect Wallet",
   requesting_accounts: "Opening Wallet...",
-  switching_network: "Switching to Sepolia...",
+  awaiting_wallet_state: "Connecting...",
   awaiting_signature: "Sign Message...",
   verifying: "Verifying...",
   done: "Connected",
@@ -31,6 +32,7 @@ export default function Navbar() {
     isConnecting,
     isAuthenticated,
     isWrongNetwork,
+    chainId,
     connectStep,
     walletError,
     authError,
@@ -40,7 +42,11 @@ export default function Navbar() {
     switchNetwork,
   } = useWallet();
 
-  const { username, openWallet } = useInterwovenKit();
+  const activeChainMeta = getChainMeta(chainId ? Number(chainId) : undefined);
+
+  const copyAddress = () => {
+    if (address) navigator.clipboard?.writeText(address).catch(() => {});
+  };
 
   const { notifications, unread, markAllRead } =
     useNotifications(isAuthenticated);
@@ -113,6 +119,20 @@ export default function Navbar() {
 
           {/* Right cluster */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Fund wallet (Interwoven Bridge) — only on Minitia */}
+            {isConnected && (
+              <div className="hidden lg:block">
+                <FundWalletButton variant="ghost" />
+              </div>
+            )}
+
+            {/* Chain switcher — always visible when connected */}
+            {isConnected && (
+              <div className="hidden sm:block">
+                <ChainSwitcher />
+              </div>
+            )}
+
             {/* Theme toggle — always visible */}
             <ThemeToggle />
 
@@ -140,11 +160,12 @@ export default function Navbar() {
                   </span>
 
                   <div
-                    onClick={openWallet}
+                    onClick={copyAddress}
+                    title="Copy address"
                     className="flex items-center gap-2 border border-default bg-surface px-3 py-1.5 text-sm cursor-pointer hover:border-[var(--color-foreground)] hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)] transition-all rounded-lg max-w-[160px]"
                   >
                     <span className="font-mono text-sm truncate">
-                      {username ? `${username}.init` : shortenAddress(address)}
+                      {shortenAddress(address)}
                     </span>
                   </div>
 
@@ -270,11 +291,12 @@ export default function Navbar() {
               {isConnected && address ? (
                 <>
                   <div
-                    onClick={openWallet}
+                    onClick={copyAddress}
+                    title="Copy address"
                     className="flex items-center justify-between gap-2 border border-default bg-muted px-4 py-3 rounded-lg cursor-pointer"
                   >
                     <span className="font-mono text-sm truncate text-fg">
-                      {username ? `${username}.init` : shortenAddress(address)}
+                      {shortenAddress(address)}
                     </span>
                     <span
                       className={cn(
@@ -325,7 +347,10 @@ export default function Navbar() {
       {/* Wrong network banner */}
       {address && isWrongNetwork && (
         <div className="bg-[var(--color-foreground)] text-[var(--color-background)] text-xs font-medium uppercase tracking-wider px-4 py-2.5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
-          <span>Wrong network — please switch to {config.chain.name}</span>
+          <span>
+            Unsupported network{activeChainMeta ? "" : ""} — please switch to a
+            supported chain
+          </span>
           <button
             onClick={switchNetwork}
             className="border border-[var(--color-background)] px-3 py-1 text-xs uppercase tracking-wide transition hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] rounded"

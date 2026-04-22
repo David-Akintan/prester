@@ -68,6 +68,28 @@ export interface FreelancerJobRecord extends JobRecord {
   progressPercentage: number;
 }
 
+export interface FreelancerBidRow {
+  bid_id: string;
+  bid_status: "pending" | "accepted" | "rejected";
+  cover_letter: string;
+  proposed_timeline: string | null;
+  bid_created_at: string;
+  id: string;
+  title: string;
+  description: string;
+  status: "draft" | "open" | "in_progress" | "completed" | "cancelled";
+  total_amount_wei: string;
+  chain_id: number;
+  chain_job_id: number | null;
+  client_address: string;
+  client_username: string | null;
+  client_avatar: string | null;
+  total_milestones: string;
+  approved_milestones: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export const usersApi = {
   getDashboard(): Promise<FreelancerDashboard> {
     return apiFetch("/users/me/dashboard");
@@ -85,6 +107,13 @@ export const usersApi = {
         .map(([k, v]) => [k, String(v)]),
     ).toString();
     return apiFetch(`/users/me/jobs${qs ? `?${qs}` : ""}`);
+  },
+
+  getMyBids(status?: "pending" | "accepted" | "rejected"): Promise<{
+    bids: FreelancerBidRow[];
+  }> {
+    const qs = status ? `?status=${status}` : "";
+    return apiFetch(`/users/me/bids${qs}`);
   },
 };
 
@@ -137,6 +166,18 @@ async function apiFetch<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const data = await res.json();
 
   if (!res.ok) {
+    // Silent-session-expiry: the token is stale (expired / signed with the
+    // pre-rotation JWT_SECRET / address mismatch). Clear locally so the
+    // next apiFetch doesn't retry with the same dead token, and let the
+    // wallet context know so UI can flip to Connect.
+    if (res.status === 401 || res.status === 403) {
+      clearToken();
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("fl3_token_issued");
+        window.dispatchEvent(new Event("auth:expired"));
+      }
+    }
+
     const err = data?.error ?? {};
     throw new ApiError(
       res.status,

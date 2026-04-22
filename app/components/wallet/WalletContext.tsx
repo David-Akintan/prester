@@ -9,33 +9,34 @@ import React, {
   useRef,
   type ReactNode,
 } from "react";
-import { useAccount, useConnectorClient, useDisconnect } from "wagmi";
-import { useInterwovenKit } from "@initia/interwovenkit-react";
+import {
+  useAccount,
+  useChainId,
+  useConnect,
+  useConnectorClient,
+  useDisconnect,
+  useSwitchChain,
+} from "wagmi";
 import { BrowserProvider, JsonRpcSigner } from "ethers";
-import type { EIP1193Provider } from "viem";
 import { useAuth, type AuthState } from "@/hooks/useAuth";
-import { config } from "@/lib/config";
-
-// ─── Connection steps — drives the UI label ──────────────────
+import { isSupportedChain, DEFAULT_CHAIN_ID } from "@/lib/chains";
 
 export type ConnectStep =
   | "idle"
   | "requesting_accounts"
-  | "switching_network"
+  | "awaiting_wallet_state"
   | "awaiting_signature"
   | "verifying"
   | "done"
   | "error";
-
-// ─── Context shape ────────────────────────────────────────────
 
 interface WalletContextType extends AuthState {
   address: string | null;
   signer: JsonRpcSigner | null;
   chainId: string | null;
   connectStep: ConnectStep;
-  isConnecting: boolean; // true during any connect step
-  isConnected: boolean; // wallet address obtained
+  isConnecting: boolean;
+  isConnected: boolean;
   isWrongNetwork: boolean;
   walletError: string | null;
   connect: () => Promise<void>;
@@ -45,288 +46,170 @@ interface WalletContextType extends AuthState {
 
 const WalletContext = createContext<WalletContextType | null>(null);
 
-// Sepolia chain params — hard-coded so we never depend on a config
-// variable being wrong for the critical network-switch call
-const SEPOLIA = {
-  chainId: "0xaa36a7", // 11155111 decimal
-  chainName: "Sepolia Testnet",
-  rpcUrls: ["https://rpc.sepolia.org"],
-  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  blockExplorerUrls: ["https://sepolia.etherscan.io"],
-} as const;
-
-// ─── Provider ─────────────────────────────────────────────────
-
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [address, setAddress] = useState<string | null>(null);
+  // ── Wagmi state ──────────────────────────────────────────
+  const { address: wagmiAddress, isConnected: wagmiConnected } = useAccount();
+  const { data: connectorClient } = useConnectorClient();
+  const { disconnect: wagmiDisconnect } = useDisconnect();
+  const { switchChainAsync } = useSwitchChain();
+  const wagmiChainId = useChainId();
+  const { connectAsync, connectors } = useConnect();
+
+  // ── Local state ──────────────────────────────────────────
   const [signer, setSigner] = useState<JsonRpcSigner | null>(null);
-  const [chainId, setChainId] = useState<string | null>(null);
   const [connectStep, setConnectStep] = useState<ConnectStep>("idle");
   const [walletError, setWalletError] = useState<string | null>(null);
 
   const auth = useAuth();
-
-  // Stable ref to auth.signIn — prevents stale closure in connect()
   const signInRef = useRef(auth.signIn);
   signInRef.current = auth.signIn;
 
+  const address = wagmiAddress?.toLowerCase() ?? null;
   const isConnecting =
     connectStep !== "idle" && connectStep !== "done" && connectStep !== "error";
-  const isWrongNetwork =
-    !!chainId && chainId.toLowerCase() !== SEPOLIA.chainId.toLowerCase();
 
-  // ── Internal: read chain id from provider ────────────────
-  async function getChainIdHex(provider: BrowserProvider): Promise<string> {
-    const network = await provider.getNetwork();
-    return `0x${network.chainId.toString(16)}`;
-  }
-
-  // ── Auto-reconnect on mount ──────────────────────────────
-  // Silently restore wallet state if the user previously approved the site.
-  // Does NOT trigger the sign-in flow — the user must click Connect for that.
-  // This keeps the address/signer available for read-only operations.
+  // ── Derive ethers signer from wagmi connector client ────
   useEffect(() => {
-    const tryAutoConnect = async () => {
-      if (typeof window === "undefined" || !window.ethereum) return;
-      try {
-        const provider = new BrowserProvider(window.ethereum as never);
-        const accounts = await provider.listAccounts();
-        if (accounts.length === 0) return;
-
-        const s = await provider.getSigner();
-        const addr = await s.getAddress();
-        const cid = await getChainIdHex(provider);
-
-        setSigner(s);
-        setAddress(addr);
-        setChainId(cid);
-        // Note: we do NOT call signIn here.
-        // isAuthenticated is restored by useAuth from localStorage.
-        // If the token expired, useAuth will have cleared it and the
-        // user will see "Signing in…" in the badge, prompting them to re-connect.
-      } catch {
-        // Not approved yet — nothing to do
-      }
-    };
-
-    tryAutoConnect();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Wallet event listeners ───────────────────────────────
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.ethereum) return;
-
-    const eth = window.ethereum as {
-      on: (e: string, fn: (...a: unknown[]) => void) => void;
-      removeListener: (e: string, fn: (...a: unknown[]) => void) => void;
-    };
-
-    const onAccountsChanged = async (accounts: string[]) => {
-      if (accounts.length === 0) {
-        // User disconnected or locked MetaMask
-        setAddress(null);
-        setSigner(null);
-        setChainId(null);
-        setConnectStep("idle");
-        auth.signOut();
-        return;
-      }
-      // User switched account — update signer but don't re-sign
-      try {
-        const provider = new BrowserProvider(window.ethereum as never);
-        const s = await provider.getSigner();
-        const addr = await s.getAddress();
-        const cid = await getChainIdHex(provider);
-        setSigner(s);
-        setAddress(addr);
-        setChainId(cid);
-        // Clear backend auth since the address changed
-        auth.signOut();
-      } catch {
-        /* ignore */
-      }
-    };
-
-    const onChainChanged = (newChainId: string) => {
-      // Reload on chain change — safest way to avoid stale provider state
-      setChainId(newChainId);
-      window.location.reload();
-    };
-
-    const onDisconnect = () => {
-      setAddress(null);
+    if (!connectorClient || !wagmiAddress) {
       setSigner(null);
-      setChainId(null);
-      setConnectStep("idle");
-      auth.signOut();
-    };
-
-    eth.on("accountsChanged", onAccountsChanged as never);
-    eth.on("chainChanged", onChainChanged as never);
-    eth.on("disconnect", onDisconnect);
-
-    return () => {
-      eth.removeListener("accountsChanged", onAccountsChanged as never);
-      eth.removeListener("chainChanged", onChainChanged as never);
-      eth.removeListener("disconnect", onDisconnect);
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Switch to Sepolia ────────────────────────────────────
-  const switchNetwork = useCallback(async () => {
-    if (typeof window === "undefined" || !window.ethereum) return;
-    setWalletError(null);
-
-    const request = (
-      window.ethereum as {
-        request: (a: unknown) => Promise<unknown>;
-      }
-    ).request.bind(window.ethereum);
-
-    try {
-      await request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: SEPOLIA.chainId }],
-      });
-    } catch (err: unknown) {
-      const code = (err as { code?: number })?.code;
-      if (code === 4902) {
-        // Chain not in wallet yet — add it
-        try {
-          await request({
-            method: "wallet_addEthereumChain",
-            params: [SEPOLIA],
-          });
-        } catch {
-          setWalletError(
-            "Could not add Sepolia to your wallet. Please add it manually.",
-          );
-        }
-      } else if (code === 4001) {
-        setWalletError("Network switch rejected.");
-      } else {
-        setWalletError(
-          "Could not switch to Sepolia. Please switch manually in MetaMask.",
-        );
-      }
+      return;
     }
-  }, []);
+    const deriveSigner = async () => {
+      try {
+        const provider = new BrowserProvider(
+          connectorClient.transport as never,
+        );
+        const s = await provider.getSigner();
+        setSigner(s);
+      } catch (err) {
+        console.error("[WalletContext] Failed to derive ethers signer:", err);
+        setSigner(null);
+      }
+    };
+    deriveSigner();
+  }, [connectorClient, wagmiAddress]);
 
-  // ── Main connect flow ────────────────────────────────────
-  //
-  // Step 1 — eth_requestAccounts  →  MetaMask account popup
-  // Step 2 — wallet_switchEthereumChain  →  ensure Sepolia
-  // Step 3 — signMessage  →  the "Sign this message" popup
-  // Step 4 — POST /auth/verify  →  JWT from backend
-  //
+  // ── Restore session marker on mount ─────────────────────
+  useEffect(() => {
+    if (wagmiConnected && wagmiAddress && !auth.isAuthenticated) {
+      setConnectStep("done");
+    }
+  }, [wagmiConnected, wagmiAddress, auth.isAuthenticated]);
+
+  // ── Detect wallet/auth address mismatch ─────────────────
+  // If the connected wallet differs from the JWT's address (e.g. user
+  // switched MetaMask accounts), drop the stale session so writes don't
+  // go in as the wrong client_address.
+  useEffect(() => {
+    if (!wagmiAddress || !auth.authAddress) return;
+    if (wagmiAddress.toLowerCase() !== auth.authAddress.toLowerCase()) {
+      auth.signOut();
+      setConnectStep("idle");
+    }
+  }, [wagmiAddress, auth.authAddress, auth]);
+
+  // ── Main connect ─────────────────────────────────────────
+  // Two-phase flow: (1) open the kit; (2) once wagmi + signer are ready,
+  // an effect below continues with SIWE. Doing it in one async function
+  // with setTimeout races wagmi's React state propagation.
   const connect = useCallback(async () => {
     setWalletError(null);
     auth.clearAuthError();
 
-    if (typeof window === "undefined" || !window.ethereum) {
-      setWalletError("No wallet detected. Please install MetaMask.");
-      setConnectStep("error");
-      return;
-    }
-
-    const request = (
-      window.ethereum as {
-        request: (a: unknown) => Promise<unknown>;
-      }
-    ).request.bind(window.ethereum);
-
     try {
-      // ── Step 1: Request account access ──────────────────
       setConnectStep("requesting_accounts");
-      await request({ method: "eth_requestAccounts" });
-
-      const provider = new BrowserProvider(window.ethereum as never);
-      const s = await provider.getSigner();
-      const addr = await s.getAddress();
-
-      // ── Step 2: Ensure Sepolia ───────────────────────────
-      const cid = await getChainIdHex(provider);
-      if (cid.toLowerCase() !== SEPOLIA.chainId.toLowerCase()) {
-        setConnectStep("switching_network");
-        try {
-          await request({
-            method: "wallet_switchEthereumChain",
-            params: [{ chainId: SEPOLIA.chainId }],
-          });
-        } catch (switchErr: unknown) {
-          const code = (switchErr as { code?: number })?.code;
-          if (code === 4902) {
-            await request({
-              method: "wallet_addEthereumChain",
-              params: [SEPOLIA],
-            });
-          } else if (code === 4001) {
-            throw new Error("You must switch to Sepolia to use Prester.");
-          } else {
-            throw new Error(
-              "Could not switch to Sepolia. Please switch manually.",
-            );
-          }
-        }
-        // After switch, reload provider so chainId is fresh
-        const freshProvider = new BrowserProvider(window.ethereum as never);
-        const freshCid = await getChainIdHex(freshProvider);
-        setChainId(freshCid);
-      } else {
-        setChainId(cid);
-      }
-
-      // Persist wallet state (signer is good regardless of chain result above)
-      setSigner(s);
-      setAddress(addr);
-
-      // ── Step 3 + 4: Sign message → verify with backend ──
-      setConnectStep("awaiting_signature");
-      // Small delay so the UI label updates before the popup appears
-      await new Promise((r) => setTimeout(r, 80));
-
-      setConnectStep("verifying");
-      await signInRef.current(addr, (msg: string) => {
-        // Switch step label back to signature while the popup is open
-        setConnectStep("awaiting_signature");
-        return s.signMessage(msg);
-      });
-
-      setConnectStep("done");
+      const connector = connectors[0];
+      if (!connector) throw new Error("No wallet connector available.");
+      await connectAsync({ connector });
+      // Hand off to the effect below — it fires when wagmi state lands.
+      setConnectStep("awaiting_wallet_state");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Connection failed.";
       setWalletError(message);
       setConnectStep("error");
-
-      // If we failed after getting the address, clear wallet state too
-      // so the UI doesn't show a half-connected state
-      setAddress(null);
       setSigner(null);
-      setChainId(null);
       auth.signOut();
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [connectAsync, connectors, auth]);
+
+  // Phase 2 of connect: wait for wagmi to expose the address/client and for
+  // the signer-derivation effect above to populate `signer`, then run SIWE.
+  // Guarded so it only fires once per connect attempt.
+  const siweInFlight = useRef(false);
+  useEffect(() => {
+    if (connectStep !== "awaiting_wallet_state") return;
+    if (!wagmiAddress || !connectorClient || !signer || wagmiChainId == null) return;
+    if (siweInFlight.current) return;
+    siweInFlight.current = true;
+
+    const run = async () => {
+      try {
+        const evmAddress = wagmiAddress.toLowerCase();
+        setConnectStep("verifying");
+        await signInRef.current(evmAddress, wagmiChainId, (msg: string) => {
+          setConnectStep("awaiting_signature");
+          return signer.signMessage(msg);
+        });
+        setConnectStep("done");
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Sign-in failed.";
+        setWalletError(message);
+        setConnectStep("error");
+        auth.signOut();
+      } finally {
+        siweInFlight.current = false;
+      }
+    };
+    run();
+  }, [connectStep, wagmiAddress, connectorClient, signer, wagmiChainId, auth]);
+
+  // ── Listen for backend-signalled auth expiry (A4) ────────
+  // apiFetch dispatches "auth:expired" on 401/403 after clearing the token.
+  // We flip UI state back to idle so the user sees the Connect button and
+  // re-auths cleanly instead of getting silent blanks.
+  useEffect(() => {
+    const handler = () => {
+      auth.signOut();
+      setConnectStep("idle");
+      setWalletError("Your session expired. Please reconnect.");
+    };
+    window.addEventListener("auth:expired", handler);
+    return () => window.removeEventListener("auth:expired", handler);
+  }, [auth]);
 
   // ── Disconnect ───────────────────────────────────────────
   const disconnect = useCallback(() => {
-    setAddress(null);
+    wagmiDisconnect();
     setSigner(null);
-    setChainId(null);
     setConnectStep("idle");
     setWalletError(null);
     auth.signOut();
-  }, [auth]);
+  }, [wagmiDisconnect, auth]);
+
+  // ── Switch to a supported chain (default: DEFAULT_CHAIN_ID) ──
+  const switchNetwork = useCallback(async () => {
+    setWalletError(null);
+    try {
+      await switchChainAsync({ chainId: DEFAULT_CHAIN_ID });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Could not switch network.";
+      setWalletError(message);
+    }
+  }, [switchChainAsync]);
 
   return (
     <WalletContext.Provider
       value={{
         address,
         signer,
-        chainId,
+        chainId: wagmiChainId != null ? String(wagmiChainId) : null,
         connectStep,
         isConnecting,
         isConnected: !!address && auth.isAuthenticated,
-        isWrongNetwork,
+        isWrongNetwork:
+          wagmiChainId != null && !isSupportedChain(wagmiChainId),
         walletError,
         connect,
         disconnect,
@@ -338,8 +221,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     </WalletContext.Provider>
   );
 }
-
-// ─── Hook ─────────────────────────────────────────────────────
 
 export function useWallet(): WalletContextType {
   const ctx = useContext(WalletContext);

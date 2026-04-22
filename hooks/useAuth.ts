@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { getAddress } from "ethers";
 import {
   authApi,
   setToken,
@@ -15,9 +16,6 @@ import {
 const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const TOKEN_ISSUED_KEY = "fl3_token_issued";
 
-// Chain ID — Sepolia for Phase 1, will change to Minitia in Phase 3
-const CHAIN_ID = 11155111;
-
 export interface AuthState {
   authAddress: string | null;
   isAuthenticating: boolean;
@@ -25,6 +23,7 @@ export interface AuthState {
   isAuthenticated: boolean;
   signIn: (
     address: string,
+    chainId: number,
     signMessage: (message: string) => Promise<string>,
   ) => Promise<void>;
   signOut: () => void;
@@ -100,6 +99,7 @@ export function useAuth(): AuthState {
   const signIn = useCallback(
     async (
       address: string,
+      chainId: number,
       signMessage: (message: string) => Promise<string>,
     ) => {
       setIsAuthenticating(true);
@@ -109,13 +109,17 @@ export function useAuth(): AuthState {
         // Step 1: get a one-time nonce from the backend
         const { nonce } = await authApi.getNonce(address);
 
-        // Step 2: construct an EIP-4361 SIWE message
+        // Step 2: construct an EIP-4361 SIWE message.
+        // The message body must carry an EIP-55 checksummed address; the
+        // SIWE parser on the backend rejects all-lowercase. API/DB calls
+        // elsewhere stay lowercase.
+        const checksummedAddress = getAddress(address);
         const messageStr = buildSiweMessage({
           domain: window.location.host,
-          address,
+          address: checksummedAddress,
           uri: window.location.origin,
           nonce,
-          chainId: CHAIN_ID,
+          chainId,
           issuedAt: new Date().toISOString(),
         });
 

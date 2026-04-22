@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Geist, Geist_Mono } from "next/font/google";
-import Providers from "@/app/Providers";
+import Providers from "@/app/providers";
 import ClientLayout from "@/app/ClientLayout";
 import "./globals.css";
 
@@ -56,6 +56,10 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+  },
+  other: {
+    "talentapp:project_verification":
+      "06b17b1f3547e1c9b67828ddd354b54c6faed95183e028a78ded92bb3a3060dfe81803443dcf95ce1de4144d06a3526c7a608d0de108462612023753b9a51849",
   },
 };
 
