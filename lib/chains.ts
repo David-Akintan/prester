@@ -8,7 +8,13 @@
  * else derive from this registry.
  */
 
-import { sepolia, celoAlfajores, baseSepolia } from "viem/chains";
+import {
+  sepolia,
+  celoAlfajores,
+  baseSepolia,
+  celo,
+  base,
+} from "viem/chains";
 import { defineChain, type Chain } from "viem";
 
 // Prester's Minitia EVM rollup. Chain ID + RPC come from env so the rollup
@@ -84,6 +90,22 @@ export const CHAIN_REGISTRY: Record<number, ChainMeta> = {
     accentColor: "#0052FF",
     explorerUrl: "https://sepolia.basescan.org",
   },
+  [celo.id]: {
+    name: "Celo",
+    shortName: "CELO",
+    viemChain: celo,
+    isTestnet: false,
+    accentColor: "#FCFF52",
+    explorerUrl: "https://celoscan.io",
+  },
+  [base.id]: {
+    name: "Base",
+    shortName: "BASE",
+    viemChain: base,
+    isTestnet: false,
+    accentColor: "#0052FF",
+    explorerUrl: "https://basescan.org",
+  },
 };
 
 export const SUPPORTED_CHAIN_IDS = Object.keys(CHAIN_REGISTRY).map(Number);
@@ -97,7 +119,8 @@ export function isSupportedChain(chainId: number | undefined): boolean {
   return chainId != null && chainId in CHAIN_REGISTRY;
 }
 
-// Default chain for pre-wallet / SSR reads. Sepolia is the safest default
-// until Minitia contracts are deployed. Clients should pass `chainId` from
-// wagmi (`useChainId()`) wherever possible rather than relying on this.
-export const DEFAULT_CHAIN_ID: number = sepolia.id;
+// Default chain for pre-wallet / SSR reads. Base mainnet is the production
+// default — cheapest L2 gas, widest wallet support. Clients should pass
+// `chainId` from wagmi (`useChainId()`) wherever possible rather than
+// relying on this.
+export const DEFAULT_CHAIN_ID: number = base.id;
