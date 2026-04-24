@@ -39,6 +39,14 @@ export function JobCard({ job, className }: JobCardProps) {
             <div className="flex flex-col items-end gap-1.5 animate-scale-in animation-delay-200 shrink-0">
               <ChainBadge chainId={job.chain_id} />
               <StatusBadge status={job.status} className="shrink-0" />
+              {job.visibility === "nda" && (
+                <span
+                  title="NDA — deliverables confidential to the assigned freelancer and client"
+                  className="inline-flex items-center gap-1 rounded-full border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-background)]"
+                >
+                  🔒 NDA
+                </span>
+              )}
             </div>
           </div>
 

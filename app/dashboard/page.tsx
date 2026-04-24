@@ -6,9 +6,14 @@ import { useJob } from "@/hooks/useMyJobs";
 import { useFreelancerDashboard } from "@/hooks/useFreelancerDashboard";
 import { JobCard } from "@/app/jobs/JobCard";
 import { shortenAddress, formatEth } from "@/lib/utils";
+import { getNativeSymbol } from "@/lib/chains";
 import { useState } from "react";
 import React from "react";
-import type { JobRecord, FreelancerBidRow } from "@/lib/api";
+import type {
+  JobRecord,
+  FreelancerBidRow,
+  FreelancerEarningsByChain,
+} from "@/lib/api";
 
 type Tab = "posted" | "bids" | "freelancer";
 
@@ -96,7 +101,7 @@ export default function DashboardPage() {
         <button
           onClick={connect}
           disabled={isConnecting}
-          className="rounded-lg bg-initia-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-initia-700 disabled:opacity-60"
+          className="rounded-lg border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-6 py-2.5 text-sm font-semibold text-[var(--color-background)] shadow-sm transition-all hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] disabled:opacity-60"
         >
           {isConnecting ? "Connecting…" : "Connect Wallet"}
         </button>
@@ -112,9 +117,19 @@ export default function DashboardPage() {
   const completedJobs = postedJobs.filter(
     (j) => j.status === "completed",
   ).length;
-  const totalLocked = postedJobs
+
+  // Per-chain escrow totals — aggregating across chains would need an FX
+  // oracle. Each entry gets its own line with the native symbol.
+  const lockedByChain = postedJobs
     .filter((j) => j.status === "open" || j.status === "in_progress")
-    .reduce((sum, j) => sum + BigInt(j.total_amount_wei), 0n);
+    .reduce<Map<number, bigint>>((map, j) => {
+      const key = j.chain_id ?? 0;
+      map.set(key, (map.get(key) ?? 0n) + BigInt(j.total_amount_wei));
+      return map;
+    }, new Map());
+  const lockedEntries = Array.from(lockedByChain.entries()).sort(
+    (a, b) => (b[1] > a[1] ? 1 : -1),
+  );
 
   const pendingBids = activeBids.filter((b) => b.bid_status === "pending").length;
   const acceptedBids = activeBids.filter((b) => b.bid_status === "accepted").length;
@@ -131,7 +146,7 @@ export default function DashboardPage() {
         </div>
         <Link
           href="/jobs/new"
-          className="self-start rounded-lg bg-initia-600 px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm transition hover:bg-initia-700 sm:self-auto"
+          className="self-start rounded-lg border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-4 py-2 text-sm font-semibold text-[var(--color-background)] shadow-sm transition-all hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] sm:self-auto"
         >
           + Post a Job
         </Link>
@@ -207,19 +222,6 @@ export default function DashboardPage() {
                       value: freelancerData.completedJobs,
                       color: "text-green-600",
                     },
-                    {
-                      label: "Total Earnings",
-                      value: `${freelancerData.totalEarningsETH} ETH`,
-                      color: "text-initia-600",
-                    },
-                    {
-                      label: "Avg per Job",
-                      value:
-                        freelancerData.completedJobs > 0
-                          ? `${(parseFloat(freelancerData.totalEarningsETH) / freelancerData.completedJobs).toFixed(4)} ETH`
-                          : "0 ETH",
-                      color: "text-purple-600",
-                    },
                   ].map((stat) => (
                     <div
                       key={stat.label}
@@ -231,6 +233,19 @@ export default function DashboardPage() {
                       </p>
                     </div>
                   ))}
+
+                  <EarningsCard
+                    label="Total Earnings"
+                    color="text-initia-600"
+                    rows={freelancerData.earningsByChain}
+                    mode="total"
+                  />
+                  <EarningsCard
+                    label="Avg per Job"
+                    color="text-purple-600"
+                    rows={freelancerData.earningsByChain}
+                    mode="average"
+                  />
                 </div>
 
                 {/* Recent completed jobs */}
@@ -249,7 +264,7 @@ export default function DashboardPage() {
                       </p>
                       <Link
                         href="/jobs"
-                        className="rounded-lg bg-initia-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-initia-700"
+                        className="rounded-lg border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-5 py-2 text-sm font-semibold text-[var(--color-background)] transition-all hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)]"
                       >
                         Browse Jobs
                       </Link>
@@ -273,7 +288,8 @@ export default function DashboardPage() {
                             </div>
                             <div className="text-right">
                               <p className="font-semibold text-green-600">
-                                {job.totalEarningsETH} ETH
+                                {job.totalEarningsETH}{" "}
+                                {getNativeSymbol(job.chain_id)}
                               </p>
                               <p className="text-xs text-gray-400">Earned</p>
                             </div>
@@ -305,11 +321,6 @@ export default function DashboardPage() {
                   value: completedJobs,
                   color: "text-green-600",
                 },
-                {
-                  label: "Locked in Escrow",
-                  value: `${formatEth(totalLocked)} ETH`,
-                  color: "text-initia-600",
-                },
               ].map((stat) => (
                 <div
                   key={stat.label}
@@ -325,6 +336,33 @@ export default function DashboardPage() {
                   </p>
                 </div>
               ))}
+
+              <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <p className="text-xs text-gray-400">Locked in Escrow</p>
+                {loading ? (
+                  <p className="mt-1 text-xl font-bold">
+                    <span className="inline-block h-6 w-12 animate-pulse rounded bg-gray-100" />
+                  </p>
+                ) : lockedEntries.length === 0 ? (
+                  <p className="mt-1 text-xl font-bold text-initia-600">
+                    {`0 ${getNativeSymbol(null)}`}
+                  </p>
+                ) : (
+                  <div className="mt-1 space-y-0.5">
+                    {lockedEntries.map(([chainId, wei]) => (
+                      <p
+                        key={chainId}
+                        className="text-base font-bold text-initia-600 leading-tight"
+                      >
+                        {formatEth(wei)}{" "}
+                        <span className="text-xs font-semibold text-gray-500">
+                          {getNativeSymbol(chainId || null)}
+                        </span>
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Error */}
@@ -359,7 +397,7 @@ export default function DashboardPage() {
                 </p>
                 <Link
                   href="/jobs/new"
-                  className="rounded-lg bg-initia-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-initia-700"
+                  className="rounded-lg border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-5 py-2 text-sm font-semibold text-[var(--color-background)] transition-all hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)]"
                 >
                   {hasAcceptedBids ? "Post a Job as Client" : "Post a Job"}
                 </Link>
@@ -397,7 +435,7 @@ export default function DashboardPage() {
                 </p>
                 <Link
                   href="/jobs"
-                  className="rounded-lg bg-initia-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-initia-700"
+                  className="rounded-lg border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-5 py-2 text-sm font-semibold text-[var(--color-background)] transition-all hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)]"
                 >
                   Browse Jobs
                 </Link>
@@ -448,6 +486,55 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function EarningsCard({
+  label,
+  color,
+  rows,
+  mode,
+}: {
+  label: string;
+  color: string;
+  rows: FreelancerEarningsByChain[];
+  mode: "total" | "average";
+}) {
+  const displayRows =
+    mode === "total"
+      ? rows.map((r) => ({
+          chainId: r.chain_id,
+          value: r.total_eth,
+        }))
+      : rows.map((r) => ({
+          chainId: r.chain_id,
+          value:
+            r.completed_count > 0
+              ? (parseFloat(r.total_eth) / r.completed_count).toFixed(4)
+              : "0",
+        }));
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <p className="text-xs text-gray-400">{label}</p>
+      {displayRows.length === 0 ? (
+        <p className={`mt-1 text-xl font-bold ${color}`}>0</p>
+      ) : (
+        <div className="mt-1 space-y-0.5">
+          {displayRows.map((row) => (
+            <p
+              key={row.chainId ?? "unknown"}
+              className={`text-base font-bold leading-tight ${color}`}
+            >
+              {row.value}{" "}
+              <span className="text-xs font-semibold text-gray-500">
+                {getNativeSymbol(row.chainId)}
+              </span>
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

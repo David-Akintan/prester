@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useChainId } from "wagmi";
-import { ApiError, bidsApi, type BidRecord } from "@/lib/api";
+import { ApiError, bidsApi, jobsApi, type BidRecord } from "@/lib/api";
 import { acceptBid } from "@/lib/contracts";
 import { shortenAddress, parseContractError, cn } from "@/lib/utils";
 import { ChainGuardedAction } from "@/app/components/ui/ChainGuardedAction";
@@ -17,6 +17,30 @@ interface BidListProps {
   jobStatus: string;
   signer: JsonRpcSigner | null;
   onRefresh: () => Promise<void>;
+}
+
+// Poll job detail until the target bid shows 'accepted'. Used as a backstop
+// for the acceptBid flow — if the /confirm-accept endpoint fails silently or
+// the chain listener is slow, the UI would otherwise be stuck on 'pending'.
+// 20s cap (10 polls × 2s) is long enough to ride out a listener reconnect
+// but short enough that a dead listener surfaces an error to the user.
+async function waitForAcceptedStatus(
+  jobId: string,
+  bidId: string,
+  maxAttempts = 10,
+  intervalMs = 2000,
+): Promise<boolean> {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const job = await jobsApi.get(jobId);
+      const bid = job.bids?.find((b) => b.id === bidId);
+      if (bid?.status === "accepted") return true;
+    } catch {
+      // transient — keep polling
+    }
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  return false;
 }
 
 export function BidList({
@@ -49,22 +73,40 @@ export function BidList({
         bid.freelancer_address,
       );
 
-      // Authoritative DB sync via confirm endpoint — doesn't rely on the
-      // listener catching the event. The listener still runs as a backstop.
+      // Authoritative DB sync via confirm endpoint. Failures here used to
+      // be swallowed, which left the UI staring at a stale "pending" bid
+      // while users thought the action succeeded. We now surface the error
+      // and fall through to a polling backstop that waits for the chain
+      // listener to catch up before giving up.
+      let confirmFailed = false;
       try {
         await bidsApi.confirmAccept(jobId, bid.id, walletChainId, receipt.hash);
       } catch (confirmErr) {
+        confirmFailed = true;
         console.warn(
           "[BidList] confirm-accept failed, falling back to listener:",
           confirmErr,
         );
       }
 
+      await onRefresh();
+
+      // Backstop: if the confirm endpoint failed (or the DB write hasn't
+      // landed yet), poll until the bid flips to 'accepted' via the
+      // on-chain listener. Caps at ~20s so a dead listener surfaces an
+      // error instead of hanging forever.
+      const accepted = await waitForAcceptedStatus(jobId, bid.id);
+      if (!accepted) {
+        throw new Error(
+          confirmFailed
+            ? "Bid confirmation failed to sync. Refresh in a moment — if it stays pending, the chain listener may be down."
+            : "On-chain acceptance confirmed, but the database hasn't updated yet. Refresh in a moment.",
+        );
+      }
+
       setSuccessMsg(
         `Bid accepted! ${bid.username ?? shortenAddress(bid.freelancer_address)} is now assigned.`,
       );
-
-      await onRefresh();
       setSelectedBid(null);
     } catch (err) {
       const parsed =
@@ -166,7 +208,7 @@ export function BidList({
             <div
               key={bid.id}
               className={cn(
-                "group rounded-xl border bg-white transition-all duration-200 hover:shadow-md animate-fade-in-up",
+                "group rounded-xl border bg-white transition-all duration-200 hover:shadow-xl animate-fade-in-up",
                 bid.status === "accepted" &&
                   "border-green-500 bg-green-50 shadow-sm",
                 bid.status === "rejected" && "border-gray-200 opacity-60",

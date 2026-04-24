@@ -59,6 +59,9 @@
   --container-max-width: 1200px;
   --section-spacing: 6rem;
 
+  /* iOS safe-area inset — applied on fixed bottom UI (drawers, sheets). */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
@@ -883,4 +886,32 @@ button:disabled {
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);
+}
+
+/* ===== HOVER UTILITIES =====
+   Token-based hover patterns that automatically invert with the theme. Prefer
+   these over hand-rolled `hover:bg-initia-*` / `hover:border-black` chains so
+   dark mode gets the same treatment without a separate override rule. */
+.hover-primary {
+  transition: var(--transition-base);
+}
+.hover-primary:hover {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  border-color: var(--color-foreground);
+}
+.hover-ghost {
+  transition: var(--transition-base);
+}
+.hover-ghost:hover {
+  background-color: var(--color-muted);
+  border-color: var(--color-foreground);
+}
+.hover-link {
+  transition: var(--transition-base);
+}
+.hover-link:hover {
+  color: var(--color-foreground);
+  text-decoration: underline;
+  text-decoration-color: var(--color-foreground);
 }

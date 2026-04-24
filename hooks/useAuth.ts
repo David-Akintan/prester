@@ -140,10 +140,24 @@ export function useAuth(): AuthState {
       } catch (err) {
         let message = "Sign-in failed. Please try again.";
 
-        if (err instanceof ApiError) {
+        const raw = err instanceof Error ? err.message : "";
+        const unsupportedChainMatch = raw.match(
+          /SIWE chainId (\d+) is not supported\. Supported: ([\d,\s]+)/i,
+        );
+        if (unsupportedChainMatch) {
+          const attempted = unsupportedChainMatch[1];
+          const supported = unsupportedChainMatch[2]
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .join(", ");
+          message =
+            `This network (chainId ${attempted}) isn't enabled on the server. ` +
+            `Switch your wallet to one of: ${supported}, then try connecting again.`;
+        } else if (err instanceof ApiError) {
           message = err.message;
         } else if (err instanceof Error) {
-          const msg = err.message.toLowerCase();
+          const msg = raw.toLowerCase();
           if (
             msg.includes("rejected") ||
             msg.includes("denied") ||

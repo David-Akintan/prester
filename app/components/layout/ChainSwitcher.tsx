@@ -81,7 +81,7 @@ export default function ChainSwitcher() {
       {open && (
         <ul
           role="listbox"
-          className="absolute right-0 top-full mt-2 w-52 border border-default bg-surface shadow-2xl z-50 rounded-lg overflow-hidden animate-fade-in"
+          className="absolute right-0 top-full mt-2 w-52 max-w-[calc(100vw-1rem)] border border-default bg-surface shadow-2xl z-50 rounded-lg overflow-hidden animate-fade-in"
         >
           {entries.map(([id, meta]) => {
             const numId = Number(id);

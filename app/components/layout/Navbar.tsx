@@ -118,7 +118,7 @@ export default function Navbar() {
           </nav>
 
           {/* Right cluster */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 md:gap-4">
             {/* Fund wallet (Interwoven Bridge) — only on Minitia */}
             {isConnected && (
               <div className="hidden lg:block">
@@ -162,7 +162,7 @@ export default function Navbar() {
                   <div
                     onClick={copyAddress}
                     title="Copy address"
-                    className="flex items-center gap-2 border border-default bg-surface px-3 py-1.5 text-sm cursor-pointer hover:border-[var(--color-foreground)] hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)] transition-all rounded-lg max-w-[160px]"
+                    className="flex items-center gap-2 border border-default bg-surface px-3 py-2 sm:py-1.5 text-sm cursor-pointer hover:border-[var(--color-foreground)] hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)] transition-all rounded-lg max-w-[140px] sm:max-w-[160px]"
                   >
                     <span className="font-mono text-sm truncate">
                       {shortenAddress(address)}
@@ -176,7 +176,7 @@ export default function Navbar() {
                           setShowNotifs((v) => !v);
                           if (unread > 0) markAllRead();
                         }}
-                        className="relative border border-default bg-surface p-2 text-sm transition hover:border-[var(--color-foreground)] hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)] rounded-lg"
+                        className="relative border border-default bg-surface p-2.5 sm:p-2 text-sm transition hover:border-[var(--color-foreground)] hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)] rounded-lg"
                         aria-label="Notifications"
                       >
                         <BellIcon />
@@ -269,7 +269,10 @@ export default function Navbar() {
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
           />
-          <div className="absolute right-0 top-16 bottom-0 w-full max-w-sm bg-surface border-l border-default p-6 flex flex-col gap-6 overflow-y-auto animate-slide-down">
+          <div
+            className="absolute right-0 top-16 bottom-0 w-full max-w-sm bg-surface border-l border-default p-6 flex flex-col gap-6 overflow-y-auto animate-slide-down"
+            style={{ paddingBottom: "calc(1.5rem + var(--safe-bottom))" }}
+          >
             <nav className="flex flex-col gap-1">
               {navLinks.map((link) => (
                 <Link
@@ -309,6 +312,39 @@ export default function Navbar() {
                       {isAuthenticated ? "Signed in" : "Unauth"}
                     </span>
                   </div>
+
+                  {/* Chain switcher — mirrors desktop access on mobile */}
+                  <div>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">
+                      Network
+                    </p>
+                    <ChainSwitcher />
+                  </div>
+
+                  {/* Notifications — mirrors desktop bell on mobile */}
+                  {isAuthenticated && (
+                    <div>
+                      <div className="mb-2 flex items-center justify-between">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+                          Notifications
+                        </p>
+                        {unread > 0 && (
+                          <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--color-foreground)] px-1.5 text-xs font-bold text-[var(--color-background)]">
+                            {unread > 9 ? "9+" : unread}
+                          </span>
+                        )}
+                      </div>
+                      <div className="overflow-hidden rounded-lg border border-default bg-surface">
+                        <NotificationsList
+                          notifications={notifications}
+                          onMarkRead={() => {
+                            if (unread > 0) markAllRead();
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <button
                     onClick={disconnect}
                     className="w-full border border-default bg-surface px-4 py-3 text-sm font-medium text-fg transition-all hover:border-[var(--color-foreground)] rounded-lg"
@@ -370,6 +406,73 @@ export default function Navbar() {
   );
 }
 
+function NotificationsList({
+  notifications,
+  onMarkRead,
+}: {
+  notifications: ReturnType<typeof useNotifications>["notifications"];
+  onMarkRead?: () => void;
+}) {
+  useEffect(() => {
+    onMarkRead?.();
+    // Only fire once on mount — intentional, mark-as-read shouldn't
+    // depend on notifications array identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="max-h-80 overflow-y-auto divide-y divide-[var(--color-border-subtle)]">
+      {notifications.length === 0 ? (
+        <p className="px-4 py-6 text-xs text-muted text-center">
+          No notifications yet.
+        </p>
+      ) : (
+        notifications.map((n) => (
+          <div
+            key={n.id}
+            className={cn(
+              "px-4 py-3 transition-colors",
+              !n.read ? "bg-muted" : "bg-surface",
+            )}
+          >
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 text-sm flex-shrink-0">
+                {{
+                  bid_accepted: "🎉",
+                  milestone_submitted: "👀",
+                  milestone_approved: "✅",
+                  funds_received: "💸",
+                  funds_released: "✅",
+                  dispute_raised: "⚖️",
+                  verdict_executed: "🏆",
+                  job_cancelled: "❌",
+                  job_completed: "🎉",
+                }[n.type] ?? "🔔"}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-fg truncate">
+                  {n.title}
+                </p>
+                <p className="text-xs text-muted mt-0.5 leading-relaxed">
+                  {n.message}
+                </p>
+                <p className="text-xs text-muted mt-1 opacity-75">
+                  {new Date(n.created_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 function NotificationsDropdown({
   notifications,
   onClose,
@@ -378,7 +481,7 @@ function NotificationsDropdown({
   onClose: () => void;
 }) {
   return (
-    <div className="absolute right-0 top-full mt-2 w-80 border border-default bg-surface shadow-2xl z-50 rounded-lg overflow-hidden">
+    <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1rem)] border border-default bg-surface shadow-2xl z-50 rounded-lg overflow-hidden">
       <div className="border-b border-default px-4 py-3 flex items-center justify-between bg-muted">
         <span className="text-xs font-semibold uppercase tracking-wider text-fg">
           Notifications
@@ -391,56 +494,7 @@ function NotificationsDropdown({
           ✕
         </button>
       </div>
-
-      <div className="max-h-80 overflow-y-auto divide-y divide-[var(--color-border-subtle)]">
-        {notifications.length === 0 ? (
-          <p className="px-4 py-6 text-xs text-muted text-center">
-            No notifications yet.
-          </p>
-        ) : (
-          notifications.map((n) => (
-            <div
-              key={n.id}
-              className={cn(
-                "px-4 py-3 transition-colors",
-                !n.read ? "bg-muted" : "bg-surface",
-              )}
-            >
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 text-sm flex-shrink-0">
-                  {{
-                    bid_accepted: "🎉",
-                    milestone_submitted: "👀",
-                    milestone_approved: "✅",
-                    funds_received: "💸",
-                    funds_released: "✅",
-                    dispute_raised: "⚖️",
-                    verdict_executed: "🏆",
-                    job_cancelled: "❌",
-                    job_completed: "🎉",
-                  }[n.type] ?? "🔔"}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-fg truncate">
-                    {n.title}
-                  </p>
-                  <p className="text-xs text-muted mt-0.5 leading-relaxed">
-                    {n.message}
-                  </p>
-                  <p className="text-xs text-muted mt-1 opacity-75">
-                    {new Date(n.created_at).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+      <NotificationsList notifications={notifications} />
     </div>
   );
 }

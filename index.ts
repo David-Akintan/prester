@@ -58,6 +58,7 @@ export interface CreateJobFormData {
   tags: string;
   requiredSkills: string;
   estimatedDuration: string;
+  visibility: "public" | "nda";
   milestones: MilestoneFormItem[];
 }
 

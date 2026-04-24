@@ -116,11 +116,21 @@ export function JobDetailSidebar({
       <div className="w-full space-y-4">
         {/* ── Payment card ──────────────────────────────── */}
         <div className="rounded-xl border border-default bg-surface p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-between gap-2">
             <span className="text-sm font-medium text-muted">
               Total Payment
             </span>
-            <StatusBadge status={job.status} />
+            <div className="flex items-center gap-1.5">
+              {job.visibility === "nda" && (
+                <span
+                  title="NDA — deliverables confidential"
+                  className="inline-flex items-center gap-1 rounded-full border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-background)]"
+                >
+                  🔒 NDA
+                </span>
+              )}
+              <StatusBadge status={job.status} />
+            </div>
           </div>
 
           <p className="mb-1 text-3xl font-bold text-fg">
@@ -188,10 +198,8 @@ export function JobDetailSidebar({
             </button>
           )}
 
-          {role === "visitor" &&
-            isAuthenticated &&
-            job.status === "open" &&
-            !myBid && (
+          {role === "visitor" && isAuthenticated && !myBid && (
+            job.status === "open" ? (
               <ChainGuardedAction jobChainId={job.chain_id} label="Place a Bid">
                 <button
                   onClick={() => setShowBidModal(true)}
@@ -200,7 +208,18 @@ export function JobDetailSidebar({
                   Place a Bid
                 </button>
               </ChainGuardedAction>
-            )}
+            ) : (
+              <button
+                type="button"
+                disabled
+                aria-disabled="true"
+                title="Bidding closed — job already assigned"
+                className="w-full rounded-lg border border-[var(--color-foreground)] bg-[var(--color-foreground)] py-2.5 text-sm font-semibold text-[var(--color-background)] opacity-40 blur-[1px] cursor-not-allowed pointer-events-none select-none"
+              >
+                Place a Bid
+              </button>
+            )
+          )}
 
           {role === "visitor" && myBid && myBid.status === "pending" && (
             <div className="space-y-2">

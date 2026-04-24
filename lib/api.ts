@@ -42,13 +42,20 @@ export function getSavedAddress(): string | null {
 
 // ─── Users (Freelancer Dashboard) ───────────────────────
 
+export interface FreelancerEarningsByChain {
+  chain_id: number | null;
+  total_wei: string;
+  total_eth: string;
+  completed_count: number;
+}
+
 export interface FreelancerDashboard {
   completedJobs: number;
   activeJobs: number;
-  totalEarningsWei: string;
-  totalEarningsETH: string;
+  earningsByChain: FreelancerEarningsByChain[];
   recentCompletedJobs: Array<{
     id: string;
+    chain_id: number | null;
     title: string;
     total_amount_wei: string;
     updated_at: string;
@@ -226,6 +233,8 @@ export interface JobListResponse {
   limit: number;
 }
 
+export type JobVisibility = "public" | "nda";
+
 export interface JobRecord {
   id: string;
   chain_id: number | null;
@@ -242,6 +251,7 @@ export interface JobRecord {
   metadata_uri: string | null;
   total_amount_wei: string;
   status: "draft" | "open" | "in_progress" | "completed" | "cancelled";
+  visibility: JobVisibility;
   created_at: string;
   updated_at: string;
   milestones: MilestoneRecord[];
@@ -298,6 +308,7 @@ export interface CreateJobPayload {
   estimated_duration?: string;
   metadata_uri?: string;
   total_amount_wei: string;
+  visibility?: JobVisibility;
   milestones: { description: string; amount_wei: string }[];
 }
 

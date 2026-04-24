@@ -40,9 +40,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen animate-fadeIn">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         {/* ── Hero ──────────────────────────────────────────── */}
-        <div className="mb-24 animate-slideDown">
+        <div className="mb-16 md:mb-24 animate-slideDown">
           <div className="flex items-baseline gap-3 mb-8">
             <span className="text-xs font-mono text-neutral-400 uppercase tracking-widest animate-pulse">
               Prester
@@ -52,7 +52,7 @@ export default function Home() {
               Decentralized Escrow
             </span>
           </div>
-          <h1 className="text-7xl font-bold tracking-tight text-black mb-8 leading-tight animate-slideUp">
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-black mb-8 leading-tight animate-slideUp">
             Hire talent.
             <br />
             Pay with confidence.
@@ -63,7 +63,7 @@ export default function Home() {
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-wrap items-center gap-6 animate-slideUp animation-delay-400">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 animate-slideUp animation-delay-400">
             <Link
               href="/jobs"
               className="group inline-flex items-center gap-3 border border-black bg-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-white transition-all hover:bg-white hover:text-black hover:shadow-xl animate-scaleIn"
@@ -108,7 +108,7 @@ export default function Home() {
         </div>
 
         {/* ── How it works ──────────────────────────────────── */}
-        <div className="mb-24 animate-fadeInUp animation-delay-800">
+        <div className="mb-16 md:mb-24 animate-fadeInUp animation-delay-800">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold tracking-tight text-black mb-4 animate-slideUp">
               How It Works
@@ -118,7 +118,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
               {
                 step: "01",
@@ -214,7 +214,7 @@ export default function Home() {
 
         {/* ── Stats ────────────────────────────────────────────── */}
         <div
-          className="border border-default bg-[var(--color-foreground)] text-[var(--color-background)] p-12 text-center animate-fadeInUp"
+          className="border border-default bg-[var(--color-foreground)] text-[var(--color-background)] p-6 sm:p-8 lg:p-12 text-center animate-fadeInUp"
           style={{ animationDelay: "1600ms" }}
         >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">

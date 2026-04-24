@@ -93,7 +93,7 @@ export default function JobsPage() {
 
         {/* Filters */}
         <div className="mb-8 animate-slideUp animation-delay-400">
-          <div className="flex flex-col gap-6 border border-black bg-white p-6 sm:flex-row sm:items-center sm:justify-between transition-all duration-300 hover:shadow-lg">
+          <div className="flex flex-col gap-4 sm:gap-6 border border-black bg-white p-4 sm:p-6 sm:flex-row sm:items-center sm:justify-between transition-all duration-300 hover:shadow-lg">
             {/* Status tabs */}
             <div className="flex flex-wrap gap-2">
               {STATUSES.map((s, index) => (

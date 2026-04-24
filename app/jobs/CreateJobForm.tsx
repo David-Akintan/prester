@@ -62,6 +62,7 @@ export function CreateJobForm() {
     tags: "",
     requiredSkills: "",
     estimatedDuration: "",
+    visibility: "public",
     milestones: [{ ...EMPTY_MILESTONE }],
   });
 
@@ -184,6 +185,7 @@ export function CreateJobForm() {
         estimated_duration: form.estimatedDuration.trim(),
         metadata_uri: metadataUri,
         total_amount_wei: totalAmountWei.toString(),
+        visibility: form.visibility,
         milestones: form.milestones.map((m, _i) => ({
           description: m.description.trim(),
           amount_wei: ethToWei(m.amountEth).toString(),
@@ -248,7 +250,7 @@ export function CreateJobForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* ── Job Details ── */}
-      <section className="border border-black p-8">
+      <section className="border border-black p-4 sm:p-6 md:p-8">
         {/* Section header */}
         <div className="mb-8 pb-4 border-b border-neutral-200">
           <div className="flex items-baseline gap-3">
@@ -354,6 +356,31 @@ export function CreateJobForm() {
             </div>
           </div>
 
+          {/* Visibility */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-black uppercase tracking-widest">
+              Visibility
+            </label>
+            <select
+              value={form.visibility}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  visibility: e.target.value as "public" | "nda",
+                }))
+              }
+              className={cn(inputBase, inputNormal, "cursor-pointer")}
+            >
+              <option value="public">Public — anyone can view</option>
+              <option value="nda">NDA — deliverables confidential</option>
+            </select>
+            <p className="mt-1.5 text-xs text-neutral-500">
+              {form.visibility === "nda"
+                ? "Job brief stays public (freelancers need it to bid). Deliverables submitted on-platform will be encrypted and readable only by the assigned freelancer and you."
+                : "Job brief and deliverables are readable by anyone."}
+            </p>
+          </div>
+
           {/* Skills + Tags */}
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div>
@@ -394,7 +421,7 @@ export function CreateJobForm() {
         </div>
       </section>
       {/* ── Milestones ── */}
-      <section className="border border-black p-8">
+      <section className="border border-black p-4 sm:p-6 md:p-8">
         {/* Section header */}
         <div className="mb-8 pb-4 border-b border-neutral-200 flex items-start justify-between">
           <div>
@@ -454,7 +481,7 @@ export function CreateJobForm() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-[2fr_1fr] lg:grid-cols-3">
                 <div className="lg:col-span-2">
                   <label className="mb-1.5 block text-xs font-semibold text-black uppercase tracking-widest">
                     Deliverable <span className="text-neutral-400">*</span>

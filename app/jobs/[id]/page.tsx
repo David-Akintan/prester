@@ -277,7 +277,7 @@ export default function JobDetailPage({ params }: PageProps) {
                 {job.milestones.map((m, index) => (
                   <li
                     key={m.id}
-                    className="rounded-xl border border-default bg-surface p-5 sm:p-6 shadow-sm transition-all hover:shadow-md animate-fade-in-up"
+                    className="rounded-xl border border-default bg-surface p-5 sm:p-6 shadow-sm transition-all hover:shadow-xl animate-fade-in-up"
                     style={{ animationDelay: `${index * 80}ms` }}
                   >
                     <div className="flex items-start justify-between gap-4">
