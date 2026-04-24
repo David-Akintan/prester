@@ -37,6 +37,7 @@ function bidRowToJob(row: FreelancerBidRow, address: string): JobRecord {
     metadata_uri: null,
     total_amount_wei: row.total_amount_wei,
     status: row.status,
+    visibility: "public",
     created_at: row.created_at,
     updated_at: row.updated_at,
     milestones: [],
