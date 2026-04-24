@@ -5,17 +5,29 @@ import { useChainId } from "wagmi";
 import { approveMilestone, raiseDispute } from "@/lib/contracts";
 import { parseContractError } from "@/lib/utils";
 import {
-  milestonesApi,
   disputesApi,
+  ipfsApi,
+  judgesApi,
+  milestonesApi,
+  ndaKeysApi,
+  type JobVisibility,
   type MilestoneRecord,
 } from "@/lib/api";
 import { ChainGuardedAction } from "@/app/components/ui/ChainGuardedAction";
+import {
+  decryptAsRecipient,
+  encodePubKey,
+  encryptForRecipients,
+  getOrDeriveMyKeypair,
+  isEnvelopeRecipient,
+} from "@/lib/nda";
 import type { JsonRpcSigner } from "ethers";
 
 interface Props {
   jobId: string;
   chainJobId: number | null;
   jobChainId: number | null;
+  jobVisibility?: JobVisibility;
   milestone: MilestoneRecord;
   signer: JsonRpcSigner | null;
   onRefresh: () => Promise<void>;
@@ -25,13 +37,20 @@ export function ClientMilestoneActions({
   jobId,
   chainJobId,
   jobChainId,
+  jobVisibility,
   milestone,
   signer,
   onRefresh,
 }: Props) {
   const walletChainId = useChainId();
-  const [loading, setLoading] = useState<"approve" | "dispute" | null>(null);
+  const isNda = jobVisibility === "nda";
+  const [loading, setLoading] = useState<"approve" | "dispute" | "open" | null>(
+    null,
+  );
   const [err, setErr] = useState<string | null>(null);
+  const [disputePrepMsg, setDisputePrepMsg] = useState<string | null>(null);
+  const pendingShareMsg =
+    "This confidential submission hasn't been shared with you yet. Ask the freelancer to reopen the job so it can be re-shared.";
 
   if (milestone.status === "pending") {
     return (
@@ -53,53 +72,168 @@ export function ClientMilestoneActions({
     return null;
   }
 
-  async function handle(action: "approve" | "dispute") {
-    if (!signer || !chainJobId) return;
-    setLoading(action);
+  // ── Helpers ─────────────────────────────────────────────────
+
+  async function fetchEnvelope(uri: string): Promise<unknown> {
+    const httpUrl = uri.startsWith("ipfs://")
+      ? uri.replace("ipfs://", "https://ipfs.io/ipfs/")
+      : uri;
+    const resp = await fetch(httpUrl);
+    if (!resp.ok) {
+      throw new Error(`Couldn't fetch the confidential file (HTTP ${resp.status}).`);
+    }
+    return resp.json();
+  }
+
+  async function openConfidentialFile() {
+    if (!signer || jobChainId == null || !milestone.deliverable_uri) return;
+    setLoading("open");
     setErr(null);
     try {
-      let receipt;
-      if (action === "approve") {
-        receipt = await approveMilestone(
-          signer,
-          BigInt(chainJobId),
-          milestone.milestone_index,
+      const kp = await getOrDeriveMyKeypair(signer, jobId, jobChainId);
+      const myAddress = await signer.getAddress();
+      // Register — no-op if already on file.
+      try {
+        await ndaKeysApi.register(jobId, encodePubKey(kp));
+      } catch {
+        /* ignore */
+      }
+      const envelope = (await fetchEnvelope(
+        milestone.deliverable_uri,
+      )) as Parameters<typeof decryptAsRecipient>[0];
+      if (!isEnvelopeRecipient(envelope, myAddress)) {
+        throw new Error(pendingShareMsg);
+      }
+      const plaintext = await decryptAsRecipient(envelope, myAddress, kp);
+      const blob = new Blob([new Uint8Array(plaintext)]);
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      // Let the browser pick it up; the tab revokes on close.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (e) {
+      setErr(
+        e instanceof Error
+          ? e.message
+          : "Couldn't open this confidential file.",
+      );
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function handleApprove() {
+    if (!signer || !chainJobId) return;
+    setLoading("approve");
+    setErr(null);
+    try {
+      const receipt = await approveMilestone(
+        signer,
+        BigInt(chainJobId),
+        milestone.milestone_index,
+      );
+      try {
+        await milestonesApi.confirmApprove(jobId, milestone.milestone_index, {
+          chain_id: walletChainId,
+          tx_hash: receipt.hash,
+        });
+      } catch (confirmErr) {
+        console.warn(
+          "[ClientMilestoneActions] confirm-approve failed, listener will backstop:",
+          confirmErr,
         );
-        try {
-          await milestonesApi.confirmApprove(
-            jobId,
-            milestone.milestone_index,
-            { chain_id: walletChainId, tx_hash: receipt.hash },
-          );
-        } catch (confirmErr) {
-          console.warn(
-            "[ClientMilestoneActions] confirm-approve failed, listener will backstop:",
-            confirmErr,
-          );
-        }
-      } else {
-        receipt = await raiseDispute(
-          signer,
-          BigInt(chainJobId),
-          milestone.milestone_index,
-        );
-        try {
-          await disputesApi.confirmRaise(jobId, milestone.milestone_index, {
-            chain_id: walletChainId,
-            tx_hash: receipt.hash,
-          });
-        } catch (confirmErr) {
-          console.warn(
-            "[ClientMilestoneActions] confirm-dispute failed, listener will backstop:",
-            confirmErr,
-          );
-        }
       }
       await onRefresh();
     } catch (e) {
       setErr(parseContractError(e));
     } finally {
       setLoading(null);
+    }
+  }
+
+  async function handleDispute() {
+    if (!signer || chainJobId == null) return;
+    setLoading("dispute");
+    setErr(null);
+    setDisputePrepMsg(null);
+    try {
+      // For NDA jobs, prepare a review copy BEFORE the on-chain tx so the
+      // judge pipeline has something to read. For public jobs, skip
+      // straight to the on-chain raise.
+      if (isNda && milestone.deliverable_uri && jobChainId != null) {
+        setDisputePrepMsg("Preparing dispute review…");
+        try {
+          const kp = await getOrDeriveMyKeypair(signer, jobId, jobChainId);
+          const myAddress = await signer.getAddress();
+          try {
+            await ndaKeysApi.register(jobId, encodePubKey(kp));
+          } catch {
+            /* ignore */
+          }
+          const envelope = (await fetchEnvelope(
+            milestone.deliverable_uri,
+          )) as Parameters<typeof decryptAsRecipient>[0];
+          if (!isEnvelopeRecipient(envelope, myAddress)) {
+            throw new Error(pendingShareMsg);
+          }
+          const plaintext = await decryptAsRecipient(envelope, myAddress, kp);
+
+          const [{ keys: partyKeys }, { keys: judgeKeys }] = await Promise.all([
+            ndaKeysApi.list(jobId),
+            judgesApi.pubkeys(),
+          ]);
+          const allRecipients = [...partyKeys, ...judgeKeys];
+          const reEnc = await encryptForRecipients(
+            new Uint8Array(plaintext),
+            kp,
+            allRecipients,
+          );
+          const { uri: disputeUri } = await ipfsApi.upload(
+            reEnc as unknown as Record<string, unknown>,
+            "deliverable",
+          );
+          await milestonesApi.setDisputeDeliverable(
+            jobId,
+            milestone.milestone_index,
+            disputeUri,
+          );
+        } catch (prepErr) {
+          if (!(prepErr instanceof Error) || prepErr.message !== pendingShareMsg) {
+            console.warn(
+              "[ClientMilestoneActions] dispute review prep failed:",
+              prepErr,
+            );
+          }
+          if (prepErr instanceof Error && prepErr.message === pendingShareMsg) {
+            throw prepErr;
+          }
+          throw new Error(
+            "Couldn't prepare the dispute review copy. Try again in a moment.",
+          );
+        }
+      }
+
+      const receipt = await raiseDispute(
+        signer,
+        BigInt(chainJobId),
+        milestone.milestone_index,
+      );
+      try {
+        await disputesApi.confirmRaise(jobId, milestone.milestone_index, {
+          chain_id: walletChainId,
+          tx_hash: receipt.hash,
+        });
+      } catch (confirmErr) {
+        console.warn(
+          "[ClientMilestoneActions] confirm-dispute failed, listener will backstop:",
+          confirmErr,
+        );
+      }
+      await onRefresh();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : parseContractError(e));
+    } finally {
+      setLoading(null);
+      setDisputePrepMsg(null);
     }
   }
 
@@ -110,10 +244,12 @@ export function ClientMilestoneActions({
           <div className="flex items-center gap-2">
             <DocIcon />
             <span className="font-medium">
-              Freelancer submitted a deliverable
+              {isNda
+                ? "Freelancer submitted confidential work"
+                : "Freelancer submitted a deliverable"}
             </span>
           </div>
-          {milestone.deliverable_uri && (
+          {milestone.deliverable_uri && !isNda && (
             <a
               href={milestone.deliverable_uri.replace(
                 "ipfs://",
@@ -126,9 +262,33 @@ export function ClientMilestoneActions({
               View deliverable ↗
             </a>
           )}
+          {milestone.deliverable_uri && isNda && (
+            <button
+              type="button"
+              onClick={openConfidentialFile}
+              disabled={loading === "open"}
+              className="text-fg hover:underline font-medium text-xs disabled:opacity-50"
+            >
+              {loading === "open"
+                ? "Opening…"
+                : "🔒 Open confidential file"}
+            </button>
+          )}
         </div>
       </div>
-      {err && <p className="text-xs text-muted">{err}</p>}
+
+      {isNda && (
+        <p className="text-xs text-muted">
+          Our reviewers are given one-time read access only if you raise a
+          dispute.
+        </p>
+      )}
+
+      {disputePrepMsg && (
+        <p className="text-xs text-muted">{disputePrepMsg}</p>
+      )}
+      {err && <p className="text-xs text-red-600">{err}</p>}
+
       <div className="flex flex-col sm:flex-row gap-2">
         <ChainGuardedAction
           jobChainId={jobChainId}
@@ -136,7 +296,7 @@ export function ClientMilestoneActions({
           containerClassName="flex-1"
         >
           <button
-            onClick={() => handle("approve")}
+            onClick={handleApprove}
             disabled={!!loading}
             className="w-full border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-4 py-2.5 text-xs font-medium uppercase tracking-widest text-[var(--color-background)] rounded-lg transition hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] disabled:opacity-40"
           >
@@ -149,7 +309,7 @@ export function ClientMilestoneActions({
           containerClassName="flex-1"
         >
           <button
-            onClick={() => handle("dispute")}
+            onClick={handleDispute}
             disabled={!!loading}
             className="w-full border border-[var(--color-foreground)] px-4 py-2.5 text-xs font-medium uppercase tracking-widest text-fg rounded-lg transition hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)] disabled:opacity-40"
           >

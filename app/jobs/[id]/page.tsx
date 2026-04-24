@@ -254,6 +254,7 @@ export default function JobDetailPage({ params }: PageProps) {
                 jobId={job.id}
                 chainJobId={job.chain_job_id}
                 jobChainId={job.chain_id}
+                jobVisibility={job.visibility}
                 bids={job.bids ?? []}
                 isClient={role === "client"}
                 jobStatus={job.status}
@@ -310,6 +311,7 @@ export default function JobDetailPage({ params }: PageProps) {
                           jobId={job.id}
                           chainJobId={job.chain_job_id}
                           jobChainId={job.chain_id}
+                          jobVisibility={job.visibility}
                           milestone={m}
                           signer={signer}
                           onRefresh={refresh}
@@ -336,6 +338,7 @@ export default function JobDetailPage({ params }: PageProps) {
                           jobId={job.id}
                           chainJobId={job.chain_job_id}
                           jobChainId={job.chain_id}
+                          jobVisibility={job.visibility}
                           milestone={m}
                           signer={signer}
                           onRefresh={refresh}

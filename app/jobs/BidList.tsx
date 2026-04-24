@@ -2,16 +2,25 @@
 
 import { useState } from "react";
 import { useChainId } from "wagmi";
-import { ApiError, bidsApi, jobsApi, type BidRecord } from "@/lib/api";
+import {
+  ApiError,
+  bidsApi,
+  jobsApi,
+  ndaKeysApi,
+  type BidRecord,
+  type JobVisibility,
+} from "@/lib/api";
 import { acceptBid } from "@/lib/contracts";
 import { shortenAddress, parseContractError, cn } from "@/lib/utils";
 import { ChainGuardedAction } from "@/app/components/ui/ChainGuardedAction";
+import { getOrDeriveMyKeypair, encodePubKey } from "@/lib/nda";
 import type { JsonRpcSigner } from "ethers";
 
 interface BidListProps {
   jobId: string;
   chainJobId: number | null;
   jobChainId: number | null;
+  jobVisibility?: JobVisibility;
   bids: BidRecord[];
   isClient: boolean;
   jobStatus: string;
@@ -47,6 +56,7 @@ export function BidList({
   jobId,
   chainJobId,
   jobChainId,
+  jobVisibility,
   bids,
   isClient,
   jobStatus,
@@ -58,6 +68,30 @@ export function BidList({
   const [selectedBid, setSelectedBid] = useState<BidRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [confidentialSetupOpen, setConfidentialSetupOpen] = useState(false);
+  const [confidentialSetupBusy, setConfidentialSetupBusy] = useState(false);
+  const [confidentialSetupError, setConfidentialSetupError] = useState<
+    string | null
+  >(null);
+
+  async function enableConfidentialDeliverables(): Promise<void> {
+    if (!signer || !jobChainId) return;
+    setConfidentialSetupBusy(true);
+    setConfidentialSetupError(null);
+    try {
+      const kp = await getOrDeriveMyKeypair(signer, jobId, jobChainId);
+      await ndaKeysApi.register(jobId, encodePubKey(kp));
+      setConfidentialSetupOpen(false);
+    } catch (err) {
+      setConfidentialSetupError(
+        err instanceof Error
+          ? err.message
+          : "Couldn't finish setup. Please try again.",
+      );
+    } finally {
+      setConfidentialSetupBusy(false);
+    }
+  }
 
   async function handleAccept(bid: BidRecord) {
     if (!signer || !chainJobId) return;
@@ -108,6 +142,10 @@ export function BidList({
         `Bid accepted! ${bid.username ?? shortenAddress(bid.freelancer_address)} is now assigned.`,
       );
       setSelectedBid(null);
+
+      if (jobVisibility === "nda") {
+        setConfidentialSetupOpen(true);
+      }
     } catch (err) {
       const parsed =
         err instanceof ApiError ? err.message : parseContractError(err);
@@ -438,6 +476,64 @@ export function BidList({
                     </ChainGuardedAction>
                   )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confidential setup modal (NDA jobs only) — post-accept one-step
+          wallet signature to enable confidential deliverables. Dismissible;
+          the persistent reminder banner in the sidebar is the fallback. */}
+      {confidentialSetupOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => {
+              if (!confidentialSetupBusy) setConfidentialSetupOpen(false);
+            }}
+          />
+          <div className="relative z-10 w-full max-w-md overflow-hidden rounded-2xl border border-default bg-surface shadow-2xl">
+            <div className="border-b border-default px-6 py-4">
+              <h3 className="text-lg font-semibold text-fg">
+                One more step
+              </h3>
+              <p className="mt-1 text-sm text-muted">
+                Enable confidential deliverables for this job.
+              </p>
+            </div>
+            <div className="px-6 py-4 space-y-3">
+              <p className="text-sm text-fg">
+                Sign one message so only you and the freelancer can read the
+                work submitted here. Free — no transaction.
+              </p>
+              <p className="text-xs text-muted">
+                Your wallet holds the key. If you lose the wallet you lose
+                access to these confidential files, just like your escrow
+                funds.
+              </p>
+              {confidentialSetupError && (
+                <p className="text-xs text-red-600">
+                  {confidentialSetupError}
+                </p>
+              )}
+            </div>
+            <div className="border-t border-default bg-surface px-6 py-4 flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                disabled={confidentialSetupBusy}
+                onClick={() => setConfidentialSetupOpen(false)}
+                className="flex-1 rounded-lg border border-default bg-surface px-4 py-2.5 text-sm font-medium text-fg transition-all hover:border-[var(--color-foreground)] disabled:opacity-50"
+              >
+                Not now
+              </button>
+              <button
+                type="button"
+                disabled={confidentialSetupBusy}
+                onClick={enableConfidentialDeliverables}
+                className="flex-1 rounded-lg border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-4 py-2.5 text-sm font-semibold text-[var(--color-background)] transition-all hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] disabled:opacity-50"
+              >
+                {confidentialSetupBusy ? "Setting up…" : "Sign to enable"}
+              </button>
             </div>
           </div>
         </div>

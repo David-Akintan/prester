@@ -447,6 +447,7 @@ function NotificationsList({
                   verdict_executed: "🏆",
                   job_cancelled: "❌",
                   job_completed: "🎉",
+                  rekey_needed: "🔓",
                 }[n.type] ?? "🔔"}
               </span>
               <div className="flex-1 min-w-0">

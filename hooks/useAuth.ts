@@ -11,6 +11,7 @@ import {
   getSavedAddress,
   ApiError,
 } from "@/lib/api";
+import { getChainMeta } from "@/lib/chains";
 
 // How long a JWT is valid — must match the backend (7 days in ms)
 const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -145,15 +146,21 @@ export function useAuth(): AuthState {
           /SIWE chainId (\d+) is not supported\. Supported: ([\d,\s]+)/i,
         );
         if (unsupportedChainMatch) {
-          const attempted = unsupportedChainMatch[1];
-          const supported = unsupportedChainMatch[2]
+          const attemptedId = parseInt(unsupportedChainMatch[1], 10);
+          const attemptedName =
+            getChainMeta(attemptedId)?.name ?? `network ${attemptedId}`;
+          const supportedNames = unsupportedChainMatch[2]
             .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean)
-            .join(", ");
+            .map((s) => parseInt(s.trim(), 10))
+            .filter((n) => !Number.isNaN(n))
+            .map((id) => getChainMeta(id)?.name ?? `network ${id}`);
+          const list =
+            supportedNames.length > 1
+              ? `${supportedNames.slice(0, -1).join(", ")}, or ${supportedNames.at(-1)}`
+              : supportedNames[0] ?? "a supported network";
           message =
-            `This network (chainId ${attempted}) isn't enabled on the server. ` +
-            `Switch your wallet to one of: ${supported}, then try connecting again.`;
+            `${attemptedName} isn't enabled for sign-in yet. ` +
+            `Switch your wallet to ${list}, then try connecting again.`;
         } else if (err instanceof ApiError) {
           message = err.message;
         } else if (err instanceof Error) {

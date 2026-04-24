@@ -420,6 +420,74 @@ export const milestonesApi = {
       body: JSON.stringify(payload),
     });
   },
+
+  setDisputeDeliverable(
+    jobId: string,
+    index: number,
+    uri: string,
+  ): Promise<{ ok: true }> {
+    return apiFetch(`/jobs/${jobId}/milestones/${index}/dispute-deliverable`, {
+      method: "POST",
+      body: JSON.stringify({ uri }),
+    });
+  },
+};
+
+// ─── NDA keys (confidential job participants) ────────────────
+// Internal API — every user-facing string lives in the caller. The
+// words "x25519", "pubkey", and "envelope" never appear in UI copy.
+
+export interface NdaKeyEntry {
+  address: string;
+  x25519_pub: string;
+}
+
+export interface NdaPendingSubmission {
+  milestone_index: number;
+  envelope_uri: string;
+  freelancer_addr: string;
+}
+
+export const ndaKeysApi = {
+  register(jobId: string, x25519_pub: string): Promise<{ ok: true }> {
+    return apiFetch(`/jobs/${jobId}/nda-keys`, {
+      method: "POST",
+      body: JSON.stringify({ x25519_pub }),
+    });
+  },
+
+  list(jobId: string): Promise<{ keys: NdaKeyEntry[] }> {
+    return apiFetch(`/jobs/${jobId}/nda-keys`);
+  },
+
+  recordPending(
+    jobId: string,
+    payload: { milestone_index: number; envelope_uri: string },
+  ): Promise<{ ok: true }> {
+    return apiFetch(`/jobs/${jobId}/nda-keys/pending-submission`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  listPending(
+    jobId: string,
+  ): Promise<{ pending: NdaPendingSubmission[] }> {
+    return apiFetch(`/jobs/${jobId}/nda-keys/pending-submission`);
+  },
+
+  clearPending(jobId: string, index: number): Promise<{ ok: true }> {
+    return apiFetch(
+      `/jobs/${jobId}/nda-keys/pending-submission/${index}`,
+      { method: "DELETE" },
+    );
+  },
+};
+
+export const judgesApi = {
+  pubkeys(): Promise<{ keys: NdaKeyEntry[] }> {
+    return apiFetch(`/judges/pubkeys`);
+  },
 };
 
 // ─── Disputes ─────────────────────────────────────────────────
