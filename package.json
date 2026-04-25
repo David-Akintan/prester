@@ -2,6 +2,7 @@
   "name": "my-app",
   "version": "0.2.0",
   "description": "Prester frontend application",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "next dev",
