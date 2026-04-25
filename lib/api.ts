@@ -6,6 +6,10 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 let _token: string | null = null;
 
+/**
+ * Retrieves the current authentication token from memory or localStorage
+ * @returns The stored token, or null if not found
+ */
 export function getToken(): string | null {
   if (_token) return _token;
   if (typeof window !== "undefined") {
@@ -14,6 +18,10 @@ export function getToken(): string | null {
   return _token;
 }
 
+/**
+ * Stores an authentication token in memory and localStorage
+ * @param token - The authentication token to store
+ */
 export function setToken(token: string) {
   _token = token;
   if (typeof window !== "undefined") {
@@ -21,6 +29,9 @@ export function setToken(token: string) {
   }
 }
 
+/**
+ * Clears the authentication token and related user data from memory and localStorage
+ */
 export function clearToken() {
   _token = null;
   if (typeof window !== "undefined") {
@@ -29,12 +40,20 @@ export function clearToken() {
   }
 }
 
+/**
+ * Saves a user's Ethereum address in lowercase format
+ * @param address - The Ethereum address to save
+ */
 export function saveAddress(address: string) {
   if (typeof window !== "undefined") {
     localStorage.setItem("fl3_address", address.toLowerCase());
   }
 }
 
+/**
+ * Retrieves the saved user address from localStorage
+ * @returns The saved address in lowercase, or null if not found
+ */
 export function getSavedAddress(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("fl3_address");
