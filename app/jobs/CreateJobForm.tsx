@@ -119,7 +119,7 @@ export function CreateJobForm() {
   ) {
     setForm((f) => {
       const milestones = [...f.milestones];
-      milestones[index] = { ...milestones[index], [field]: value };
+      milestones[index] = { ...milestones[index], [field]: value } as MilestoneFormItem;
       return { ...f, milestones };
     });
   }
