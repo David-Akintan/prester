@@ -1,0 +1,17 @@
+{
+  "name": "Prester",
+  "short_name": "Prester",
+  "description": "Decentralized freelance platform built on Celo with AI-powered dispute resolution",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/globe.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

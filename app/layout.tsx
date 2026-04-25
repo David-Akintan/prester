@@ -24,6 +24,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://presterr.vercel.app"),
+  applicationName: "Prester",
   title: {
     default: "Prester",
     template: "%s | Prester",
@@ -43,6 +44,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  manifest: "/manifest.webmanifest",
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -71,6 +73,10 @@ export const metadata: Metadata = {
     "talentapp:project_verification":
       "06b17b1f3547e1c9b67828ddd354b54c6faed95183e028a78ded92bb3a3060dfe81803443dcf95ce1de4144d06a3526c7a608d0de108462612023753b9a51849",
   },
+};
+
+export const viewport = {
+  themeColor: "#000000",
 };
 
 // Runs before React hydrates — prevents a flash of wrong theme.
