@@ -293,6 +293,7 @@ export default function Navbar() {
           />
           <div
             id="mobile-navigation-drawer"
+            role="dialog"
             className="absolute right-0 top-16 bottom-0 w-full max-w-sm bg-surface border-l border-default p-6 flex flex-col gap-6 overflow-y-auto animate-slide-down"
             style={{ paddingBottom: "calc(1.5rem + var(--safe-bottom))" }}
           >
