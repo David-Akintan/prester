@@ -93,3 +93,6 @@ export const API_REQUEST_TIMEOUT_MS = 30000;
 
 /** Cache duration for user profile data in milliseconds */
 export const PROFILE_CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+
+/** Slow request threshold for performance monitoring in milliseconds */
+export const SLOW_REQUEST_THRESHOLD_MS = 3000;
