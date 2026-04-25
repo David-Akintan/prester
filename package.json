@@ -2,13 +2,37 @@
   "name": "my-app",
   "version": "0.2.0",
   "description": "Prester frontend application",
+  "author": "Prester Team",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/David-Akintan/prester.git"
+  },
+  "homepage": "https://presterr.vercel.app",
+  "bugs": {
+    "url": "https://github.com/David-Akintan/prester/issues"
+  },
+  "keywords": [
+    "freelance",
+    "decentralized",
+    "web3",
+    "ethereum",
+    "celo",
+    "escrow",
+    "ai-judge",
+    "next.js"
+  ],
   "private": true,
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\" --ignore-path .gitignore",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
