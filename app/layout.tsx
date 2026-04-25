@@ -23,6 +23,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://presterr.vercel.app"),
   title: {
     default: "Prester",
     template: "%s | Prester",
@@ -39,6 +40,9 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Prester Team" }],
   creator: "Prester",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -46,6 +50,12 @@ export const metadata: Metadata = {
     title: "Prester - Decentralized Freelance Platform",
     description:
       "Decentralized freelance platform built on Celo with AI-powered dispute resolution",
+    images: [
+      {
+        url: "/globe.svg",
+        alt: "Prester",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
