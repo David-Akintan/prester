@@ -17,6 +17,25 @@ import {
 } from "viem/chains";
 import { defineChain, type Chain } from "viem";
 
+// Celo Sepolia — the testnet MiniPay's developer mode targets.
+// The installed viem (2.23.x) doesn't yet ship `celoSepolia`, so define it
+// inline. Once viem is bumped, this can be replaced with the upstream import.
+export const celoSepolia = defineChain({
+  id: 11142220,
+  name: "Celo Sepolia",
+  nativeCurrency: { name: "CELO", symbol: "CELO", decimals: 18 },
+  rpcUrls: {
+    default: { http: ["https://forno.celo-sepolia.celo-testnet.org"] },
+  },
+  blockExplorers: {
+    default: {
+      name: "Celo Sepolia Blockscout",
+      url: "https://celo-sepolia.blockscout.com",
+    },
+  },
+  testnet: true,
+});
+
 // Prester's Minitia EVM rollup. Chain ID + RPC come from env so the rollup
 // can be launched without a code change.
 export const minitiaEvm = defineChain({
@@ -81,6 +100,14 @@ export const CHAIN_REGISTRY: Record<number, ChainMeta> = {
     isTestnet: true,
     accentColor: "#FCFF52",
     explorerUrl: "https://alfajores.celoscan.io",
+  },
+  [celoSepolia.id]: {
+    name: "Celo Sepolia",
+    shortName: "CELO",
+    viemChain: celoSepolia,
+    isTestnet: true,
+    accentColor: "#FCFF52",
+    explorerUrl: "https://celo-sepolia.blockscout.com",
   },
   [baseSepolia.id]: {
     name: "Base Sepolia",

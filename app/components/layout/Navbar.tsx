@@ -36,6 +36,7 @@ export default function Navbar() {
     connectStep,
     walletError,
     authError,
+    isMiniPay,
     clearAuthError,
     connect,
     disconnect,
@@ -196,13 +197,32 @@ export default function Navbar() {
                     </div>
                   )}
 
-                  <button
-                    onClick={disconnect}
-                    className="border border-default bg-surface px-3 py-1.5 text-xs font-medium uppercase tracking-wide text-fg transition-all hover:border-[var(--color-foreground)] hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)] rounded-lg"
-                  >
-                    Disconnect
-                  </button>
+                  {isMiniPay && (
+                    <span
+                      className="hidden lg:inline-flex items-center gap-1 border border-[#FCFF52] bg-[#FCFF52] text-black px-2 py-1 text-xs font-semibold uppercase tracking-wide rounded-full"
+                      title="Connected via MiniPay"
+                    >
+                      MiniPay
+                    </span>
+                  )}
+
+                  {!isMiniPay && (
+                    <button
+                      onClick={disconnect}
+                      className="border border-default bg-surface px-3 py-1.5 text-xs font-medium uppercase tracking-wide text-fg transition-all hover:border-[var(--color-foreground)] hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)] rounded-lg"
+                    >
+                      Disconnect
+                    </button>
+                  )}
                 </>
+              ) : isMiniPay ? (
+                // MiniPay handles wallet connection implicitly — show a
+                // status pill instead of the Connect button while the
+                // injected auto-connect resolves.
+                <span className="inline-flex items-center gap-2 border border-default bg-surface px-3 py-2 text-xs font-medium uppercase tracking-wide text-fg rounded-lg">
+                  <Spinner />
+                  Connecting MiniPay…
+                </span>
               ) : (
                 <button
                   onClick={() => {
@@ -345,13 +365,25 @@ export default function Navbar() {
                     </div>
                   )}
 
-                  <button
-                    onClick={disconnect}
-                    className="w-full border border-default bg-surface px-4 py-3 text-sm font-medium text-fg transition-all hover:border-[var(--color-foreground)] rounded-lg"
-                  >
-                    Disconnect
-                  </button>
+                  {isMiniPay && (
+                    <div className="flex items-center justify-center gap-2 border border-[#FCFF52] bg-[#FCFF52] text-black px-3 py-2 text-xs font-semibold uppercase tracking-wide rounded-lg">
+                      Connected via MiniPay
+                    </div>
+                  )}
+
+                  {!isMiniPay && (
+                    <button
+                      onClick={disconnect}
+                      className="w-full border border-default bg-surface px-4 py-3 text-sm font-medium text-fg transition-all hover:border-[var(--color-foreground)] rounded-lg"
+                    >
+                      Disconnect
+                    </button>
+                  )}
                 </>
+              ) : isMiniPay ? (
+                <div className="w-full flex items-center justify-center gap-2 border border-default bg-surface px-4 py-3 text-sm font-medium uppercase tracking-wide text-fg rounded-lg">
+                  <Spinner /> Connecting MiniPay…
+                </div>
               ) : (
                 <button
                   onClick={() => {

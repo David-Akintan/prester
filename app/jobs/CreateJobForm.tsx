@@ -54,7 +54,7 @@ export function CreateJobForm() {
   const router = useRouter();
   const chainId = useChainId();
   const nativeSymbol = getNativeSymbol(chainId);
-  const { signer, isConnected, isAuthenticated } = useWallet();
+  const { signer, isConnected, isAuthenticated, isMiniPay } = useWallet();
   const [form, setForm] = useState<CreateJobFormData>({
     title: "",
     description: "",
@@ -249,6 +249,22 @@ export function CreateJobForm() {
   // ── Render ────────────────────────────────────────────────
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+      {/* MiniPay-only notice — escrow is native-token (CELO/ETH); MiniPay
+          signs stablecoins (USDm/USDC/USDT) and won't fund this tx. */}
+      {isMiniPay && (
+        <div className="border border-black bg-[#FCFF52] px-5 py-4 text-sm text-black">
+          <p className="font-semibold uppercase tracking-widest text-xs">
+            MiniPay detected
+          </p>
+          <p className="mt-1.5">
+            This build's escrow accepts native {nativeSymbol} only. MiniPay
+            signs stablecoin transactions (USDm/USDC/USDT), so funding a job
+            from inside MiniPay will revert. Open this site in a different
+            wallet to post a job, or stay in MiniPay to browse and bid.
+          </p>
+        </div>
+      )}
+
       {/* ── Job Details ── */}
       <section className="border border-black p-4 sm:p-6 md:p-8">
         {/* Section header */}

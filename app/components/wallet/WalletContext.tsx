@@ -19,6 +19,7 @@ import {
 } from "wagmi";
 import { BrowserProvider, JsonRpcSigner } from "ethers";
 import { useAuth, type AuthState } from "@/hooks/useAuth";
+import { useMiniPay } from "@/hooks/useMiniPay";
 import { isSupportedChain, DEFAULT_CHAIN_ID } from "@/lib/chains";
 
 export type ConnectStep =
@@ -39,6 +40,7 @@ interface WalletContextType extends AuthState {
   isConnected: boolean;
   isWrongNetwork: boolean;
   walletError: string | null;
+  isMiniPay: boolean;
   connect: () => Promise<void>;
   disconnect: () => void;
   switchNetwork: () => Promise<void>;
@@ -54,6 +56,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { switchChainAsync } = useSwitchChain();
   const wagmiChainId = useChainId();
   const { connectAsync, connectors } = useConnect();
+
+  // ── MiniPay detection + auto-connect (Celo Mini App support) ──
+  // The hook owns the `window.ethereum.isMiniPay` check and auto-connect.
+  const { isMiniPay } = useMiniPay();
 
   // ── Local state ──────────────────────────────────────────
   const [signer, setSigner] = useState<JsonRpcSigner | null>(null);
@@ -211,6 +217,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         isWrongNetwork:
           wagmiChainId != null && !isSupportedChain(wagmiChainId),
         walletError,
+        isMiniPay,
         connect,
         disconnect,
         switchNetwork,
