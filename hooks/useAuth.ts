@@ -146,10 +146,10 @@ export function useAuth(): AuthState {
           /SIWE chainId (\d+) is not supported\. Supported: ([\d,\s]+)/i,
         );
         if (unsupportedChainMatch) {
-          const attemptedId = parseInt(unsupportedChainMatch[1], 10);
+          const attemptedId = parseInt(unsupportedChainMatch[1]!, 10);
           const attemptedName =
             getChainMeta(attemptedId)?.name ?? `network ${attemptedId}`;
-          const supportedNames = unsupportedChainMatch[2]
+          const supportedNames = unsupportedChainMatch[2]!
             .split(",")
             .map((s) => parseInt(s.trim(), 10))
             .filter((n) => !Number.isNaN(n))
