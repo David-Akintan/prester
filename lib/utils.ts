@@ -170,3 +170,13 @@ export function parseContractError(err: unknown): string {
 
   return cleaned || "Transaction failed. Please try again.";
 }
+
+// ─────────────────────────────────────────────────────────────
+// Calculation helpers
+// ─────────────────────────────────────────────────────────────
+
+/** Calculate percentage of a value */
+export function calculatePercentage(value: number, total: number): number {
+  if (total === 0) return 0;
+  return Math.round((value / total) * 100);
+}
