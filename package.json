@@ -29,11 +29,14 @@
   },
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run type-check",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "lint:fix": "next lint --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\" --ignore-path .gitignore",
     "type-check": "tsc --noEmit",
+    "clean": "npx rimraf .next tsconfig.tsbuildinfo",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui"
