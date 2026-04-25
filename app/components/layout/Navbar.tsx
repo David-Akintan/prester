@@ -266,6 +266,7 @@ export default function Navbar() {
               onClick={() => setMobileOpen((v) => !v)}
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileOpen}
+              aria-controls="mobile-navigation-drawer"
               className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-default bg-surface text-fg hover:border-[var(--color-foreground)] transition-all"
             >
               {mobileOpen ? (
@@ -291,6 +292,7 @@ export default function Navbar() {
             aria-hidden="true"
           />
           <div
+            id="mobile-navigation-drawer"
             className="absolute right-0 top-16 bottom-0 w-full max-w-sm bg-surface border-l border-default p-6 flex flex-col gap-6 overflow-y-auto animate-slide-down"
             style={{ paddingBottom: "calc(1.5rem + var(--safe-bottom))" }}
           >
