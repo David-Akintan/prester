@@ -299,6 +299,7 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  aria-current={pathname === link.href ? "page" : undefined}
                   className={cn(
                     "flex items-center px-4 py-3 text-base font-medium rounded-lg transition-all",
                     pathname === link.href
