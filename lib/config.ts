@@ -21,7 +21,7 @@ export const SUPPORTED_CHAINS: Record<string, { name: string; rpcUrl: string }> 
       id,
       {
         name: meta.name,
-        rpcUrl: meta.viemChain.rpcUrls.default.http[0],
+        rpcUrl: meta.viemChain.rpcUrls.default.http[0] ?? "",
       },
     ]),
   );
