@@ -6,6 +6,16 @@ Decentralized freelance marketplace with AI-judge dispute resolution. Milestone 
 
 ---
 
+## Quick Start (Frontend Only)
+
+```bash
+npm install
+npm run dev
+# Open http://localhost:3000
+```
+
+---
+
 ## Repository layout
 
 ```
