@@ -65,6 +65,10 @@ const config: Config = {
           DEFAULT: "#404040",
           foreground: "#ffffff",
         },
+        highlight: {
+          DEFAULT: "#f0f0f0",
+          foreground: "#000000",
+        },
       },
       fontFamily: {
         sans: [
