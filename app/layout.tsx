@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     template: "%s | Prester",
   },
   description:
-    "Decentralized freelance platform built on Initia with AI-powered dispute resolution",
+    "Decentralized freelance platform built on Celo with AI-powered dispute resolution",
   keywords: [
     "freelance",
     "decentralized",
@@ -42,16 +42,16 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://prester.io",
+    url: "https://presterr.vercel.app",
     title: "Prester - Decentralized Freelance Platform",
     description:
-      "Decentralized freelance platform built on Initia with AI-powered dispute resolution",
+      "Decentralized freelance platform built on Celo with AI-powered dispute resolution",
   },
   twitter: {
     card: "summary_large_image",
     title: "Prester",
     description:
-      "Decentralized freelance platform built on Initia with AI-powered dispute resolution",
+      "Decentralized freelance platform built on Celo with AI-powered dispute resolution",
   },
   robots: {
     index: true,

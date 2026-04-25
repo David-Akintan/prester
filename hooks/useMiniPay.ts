@@ -19,12 +19,6 @@ import { useEffect, useState } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { injected } from "wagmi/connectors";
 
-interface MiniPayWindow extends Window {
-  ethereum?: {
-    isMiniPay?: boolean;
-  };
-}
-
 export function useMiniPay(): { isMiniPay: boolean; isReady: boolean } {
   const [isMiniPay, setIsMiniPay] = useState(false);
   const [isReady, setIsReady] = useState(false);
@@ -32,8 +26,7 @@ export function useMiniPay(): { isMiniPay: boolean; isReady: boolean } {
   const { connect } = useConnect();
 
   useEffect(() => {
-    const w = window as MiniPayWindow;
-    const detected = !!w.ethereum?.isMiniPay;
+    const detected = !!window.ethereum?.isMiniPay;
     setIsMiniPay(detected);
     setIsReady(true);
 
