@@ -33,4 +33,4 @@ export function getContractAddresses(chainId: number): ContractAddressSet {
 
 // Deprecated alias — points at chainId 11155111. New code should call
 // getContractAddresses(chainId).
-export const CONTRACT_ADDRESSES = getContractAddresses(11155111);
+export const CONTRACT_ADDRESSES = CONTRACT_ADDRESSES_BY_CHAIN[11155111];

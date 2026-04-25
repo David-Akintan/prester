@@ -13,11 +13,7 @@ function rpcFor(chainId: number): string {
   if (!meta) {
     throw new Error(`Unsupported chainId: ${chainId}`);
   }
-  const url = meta.viemChain.rpcUrls.default.http[0];
-  if (!url) {
-    throw new Error(`No RPC URL configured for chainId ${chainId}`);
-  }
-  return url;
+  return meta.viemChain.rpcUrls.default.http[0];
 }
 
 /**

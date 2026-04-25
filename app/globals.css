@@ -32,9 +32,6 @@
   --color-warning: #404040;
   --color-warning-foreground: var(--color-white);
 
-  /* Interactive Elements */
-  --transition-duration: 150ms;
-
   /* Background & Surface */
   --color-background: var(--color-white);
   --color-foreground: var(--color-black);

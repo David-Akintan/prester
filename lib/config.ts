@@ -21,7 +21,7 @@ export const SUPPORTED_CHAINS: Record<string, { name: string; rpcUrl: string }> 
       id,
       {
         name: meta.name,
-        rpcUrl: meta.viemChain.rpcUrls.default.http[0] ?? "",
+        rpcUrl: meta.viemChain.rpcUrls.default.http[0],
       },
     ]),
   );
@@ -83,16 +83,3 @@ export function isContractDeployed(chainId?: number): boolean {
   const id = chainId ?? DEFAULT_CHAIN_ID;
   return id in CONTRACT_ADDRESSES_BY_CHAIN;
 }
-
-// ─────────────────────────────────────────────────────────────
-// Request timeouts and cache settings
-// ─────────────────────────────────────────────────────────────
-
-/** Default API request timeout in milliseconds */
-export const API_REQUEST_TIMEOUT_MS = 30000;
-
-/** Cache duration for user profile data in milliseconds */
-export const PROFILE_CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
-
-/** Slow request threshold for performance monitoring in milliseconds */
-export const SLOW_REQUEST_THRESHOLD_MS = 3000;
