@@ -16,6 +16,7 @@
     "@initia/icons-react": "^2.1.0",
     "@initia/interwovenkit-react": "^2.5.1",
     "@initia/react-wallet-widget": "^1.9.8",
+    "@noble/hashes": "^1.3.3",
     "@supabase/supabase-js": "^2.100.0",
     "@tailwindcss/postcss": "^4",
     "@tanstack/query-core": "^5.97.0",

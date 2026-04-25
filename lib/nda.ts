@@ -10,6 +10,7 @@ import { getAddress, type Signer } from "ethers";
 
 const SCHEMA = "prester.nda.v1";
 const ALG = "x25519-xsalsa20poly1305+aes-gcm-256";
+const PAYLOAD_SCHEMA = "prester.nda.payload.v1";
 
 const DERIVATION_MESSAGE_V1 = (jobId: string, chainId: number) =>
   `Prester NDA key derivation v1\njob=${jobId}\nchain=${chainId}`;
@@ -38,6 +39,32 @@ export interface RecipientKey {
   address: string;
   x25519_pub: string;
 }
+
+interface TextDeliverablePayload {
+  schema: typeof PAYLOAD_SCHEMA;
+  kind: "text";
+  text: string;
+}
+
+interface FileDeliverablePayload {
+  schema: typeof PAYLOAD_SCHEMA;
+  kind: "file";
+  name: string;
+  mimeType: string | null;
+  bytes: string;
+}
+
+type DeliverablePayload = TextDeliverablePayload | FileDeliverablePayload;
+
+export type DecodedDeliverable =
+  | { kind: "text"; text: string; legacy: boolean }
+  | {
+      kind: "file";
+      name: string;
+      mimeType: string;
+      bytes: Uint8Array;
+      legacy: boolean;
+    };
 
 function toOwnedBytes(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
   return Uint8Array.from(bytes);
@@ -249,8 +276,121 @@ export function utf8Decode(b: Uint8Array): string {
   return new TextDecoder().decode(b);
 }
 
+export async function encodeDeliverableManifest(
+  file: File | null,
+  textBody: string,
+): Promise<Uint8Array> {
+  if (file) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    return utf8Encode(
+      JSON.stringify({
+        schema: PAYLOAD_SCHEMA,
+        kind: "file",
+        name: file.name,
+        mimeType: file.type || null,
+        bytes: toB64(bytes),
+      } satisfies FileDeliverablePayload),
+    );
+  }
+
+  return utf8Encode(
+    JSON.stringify({
+      schema: PAYLOAD_SCHEMA,
+      kind: "text",
+      text: textBody,
+    } satisfies TextDeliverablePayload),
+  );
+}
+
+export function decodeDeliverablePayload(
+  plaintext: Uint8Array,
+): DecodedDeliverable {
+  const manifest = tryParseDeliverablePayload(plaintext);
+  if (manifest?.kind === "text") {
+    return { kind: "text", text: manifest.text, legacy: false };
+  }
+  if (manifest?.kind === "file") {
+    return {
+      kind: "file",
+      name: manifest.name || "confidential-deliverable.bin",
+      mimeType: manifest.mimeType || "application/octet-stream",
+      bytes: fromB64(manifest.bytes),
+      legacy: false,
+    };
+  }
+
+  const legacyText = tryDecodeLegacyText(plaintext);
+  if (legacyText != null) {
+    return { kind: "text", text: legacyText, legacy: true };
+  }
+
+  return {
+    kind: "file",
+    name: "confidential-deliverable.bin",
+    mimeType: "application/octet-stream",
+    bytes: Uint8Array.from(plaintext),
+    legacy: true,
+  };
+}
+
 // ─── Public accessor for keypair pubkey in base64 ────────────
 
 export function encodePubKey(keypair: Keypair): string {
   return toB64(keypair.publicKey);
+}
+
+function tryParseDeliverablePayload(
+  plaintext: Uint8Array,
+): DeliverablePayload | null {
+  try {
+    const raw = utf8Decode(plaintext);
+    const parsed = JSON.parse(raw) as Partial<DeliverablePayload>;
+    if (parsed.schema !== PAYLOAD_SCHEMA) {
+      return null;
+    }
+    if (parsed.kind === "text" && typeof parsed.text === "string") {
+      return parsed as TextDeliverablePayload;
+    }
+    if (
+      parsed.kind === "file" &&
+      typeof parsed.name === "string" &&
+      (typeof parsed.mimeType === "string" || parsed.mimeType === null) &&
+      typeof parsed.bytes === "string"
+    ) {
+      return parsed as FileDeliverablePayload;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function tryDecodeLegacyText(plaintext: Uint8Array): string | null {
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(plaintext);
+    const trimmed = text.trim();
+    if (!trimmed || /\u0000/.test(text)) {
+      return null;
+    }
+    return looksMostlyText(text) ? text : null;
+  } catch {
+    return null;
+  }
+}
+
+function looksMostlyText(text: string): boolean {
+  let printable = 0;
+  for (const char of text) {
+    const code = char.charCodeAt(0);
+    if (
+      code === 9 ||
+      code === 10 ||
+      code === 13 ||
+      (code >= 32 && code <= 126) ||
+      code >= 160
+    ) {
+      printable += 1;
+    }
+  }
+  return printable / text.length >= 0.9;
 }

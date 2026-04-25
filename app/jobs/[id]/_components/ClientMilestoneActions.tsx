@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useChainId } from "wagmi";
 import { approveMilestone, raiseDispute } from "@/lib/contracts";
 import { parseContractError } from "@/lib/utils";
@@ -15,7 +15,9 @@ import {
 } from "@/lib/api";
 import { ChainGuardedAction } from "@/app/components/ui/ChainGuardedAction";
 import {
+  decodeDeliverablePayload,
   decryptAsRecipient,
+  type DecodedDeliverable,
   encodePubKey,
   encryptForRecipients,
   getOrDeriveMyKeypair,
@@ -49,8 +51,76 @@ export function ClientMilestoneActions({
   );
   const [err, setErr] = useState<string | null>(null);
   const [disputePrepMsg, setDisputePrepMsg] = useState<string | null>(null);
-  const pendingShareMsg =
-    "This confidential submission hasn't been shared with you yet. Ask the freelancer to reopen the job so it can be re-shared.";
+  const [waitingForShare, setWaitingForShare] = useState(false);
+  const [revealed, setRevealed] = useState<
+    | ({ kind: "text"; text: string; legacy: boolean; href: string | null })
+    | ({
+        kind: "file";
+        name: string;
+        mimeType: string;
+        legacy: boolean;
+        href: string;
+      })
+    | null
+  >(null);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const revealedHrefRef = useRef<string | null>(null);
+
+  // Friendly in-flight banner shown when the client clicks "Open" or
+  // "Raise dispute" but the envelope on IPFS doesn't include them yet
+  // (the freelancer submitted before the client registered their key).
+  // Backend has been pinged via ndaKeysApi.register; freelancer was
+  // notified; we poll onRefresh until the milestone's deliverable_uri
+  // updates with a re-keyed envelope that includes us.
+  const waitingShareMsg =
+    "We just enabled your confidential access and asked the freelancer to share this with you. You'll see it here automatically once they reopen the job.";
+
+  function clearPoll() {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }
+
+  function clearRevealedFileHref() {
+    if (revealedHrefRef.current) {
+      URL.revokeObjectURL(revealedHrefRef.current);
+      revealedHrefRef.current = null;
+    }
+  }
+
+  function startPollForReshare() {
+    clearPoll();
+    setWaitingForShare(true);
+    let attempts = 0;
+    pollTimerRef.current = setInterval(() => {
+      attempts += 1;
+      void onRefresh();
+      if (attempts >= 5) {
+        clearPoll();
+      }
+    }, 8_000);
+  }
+
+  useEffect(() => {
+    return () => {
+      clearPoll();
+      clearRevealedFileHref();
+    };
+  }, []);
+
+  // Once a refresh brings in an envelope that *does* include us, drop the
+  // waiting banner so the next click on "Open confidential file" succeeds.
+  useEffect(() => {
+    if (!waitingForShare) return;
+    setWaitingForShare(false);
+    clearPoll();
+  }, [milestone.deliverable_uri]);
+
+  useEffect(() => {
+    clearRevealedFileHref();
+    setRevealed(null);
+  }, [milestone.deliverable_uri]);
 
   if (milestone.status === "pending") {
     return (
@@ -85,6 +155,34 @@ export function ClientMilestoneActions({
     return resp.json();
   }
 
+  function revealDeliverable(deliverable: DecodedDeliverable) {
+    clearRevealedFileHref();
+    if (deliverable.kind === "text") {
+      setRevealed({
+        kind: "text",
+        text: deliverable.text,
+        legacy: deliverable.legacy,
+        href: toSubmissionHref(deliverable.text),
+      });
+      return;
+    }
+
+    const href = URL.createObjectURL(
+      new Blob([Uint8Array.from(deliverable.bytes)], {
+        type: deliverable.mimeType,
+      }),
+    );
+    revealedHrefRef.current = href;
+    setRevealed({
+      kind: "file",
+      name: deliverable.name,
+      mimeType: deliverable.mimeType,
+      legacy: deliverable.legacy,
+      href,
+    });
+    window.open(href, "_blank", "noopener,noreferrer");
+  }
+
   async function openConfidentialFile() {
     if (!signer || jobChainId == null || !milestone.deliverable_uri) return;
     setLoading("open");
@@ -92,7 +190,8 @@ export function ClientMilestoneActions({
     try {
       const kp = await getOrDeriveMyKeypair(signer, jobId, jobChainId);
       const myAddress = await signer.getAddress();
-      // Register — no-op if already on file.
+      // Register — no-op if already on file. The act of registering also
+      // pings the backend to notify the freelancer of any pending shares.
       try {
         await ndaKeysApi.register(jobId, encodePubKey(kp));
       } catch {
@@ -102,14 +201,16 @@ export function ClientMilestoneActions({
         milestone.deliverable_uri,
       )) as Parameters<typeof decryptAsRecipient>[0];
       if (!isEnvelopeRecipient(envelope, myAddress)) {
-        throw new Error(pendingShareMsg);
+        // Envelope was uploaded before we registered. Don't dead-end — the
+        // backend has notified the freelancer; show the in-flight banner
+        // and start polling for the re-keyed envelope.
+        startPollForReshare();
+        return;
       }
       const plaintext = await decryptAsRecipient(envelope, myAddress, kp);
-      const blob = new Blob([new Uint8Array(plaintext)]);
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank", "noopener,noreferrer");
-      // Let the browser pick it up; the tab revokes on close.
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      revealDeliverable(
+        decodeDeliverablePayload(new Uint8Array(plaintext)),
+      );
     } catch (e) {
       setErr(
         e instanceof Error
@@ -173,7 +274,12 @@ export function ClientMilestoneActions({
             milestone.deliverable_uri,
           )) as Parameters<typeof decryptAsRecipient>[0];
           if (!isEnvelopeRecipient(envelope, myAddress)) {
-            throw new Error(pendingShareMsg);
+            // Same in-flight pattern as openConfidentialFile — the
+            // freelancer has been pinged; surface the banner and abort
+            // the dispute attempt without an alarming error.
+            setDisputePrepMsg(null);
+            startPollForReshare();
+            return;
           }
           const plaintext = await decryptAsRecipient(envelope, myAddress, kp);
 
@@ -197,15 +303,10 @@ export function ClientMilestoneActions({
             disputeUri,
           );
         } catch (prepErr) {
-          if (!(prepErr instanceof Error) || prepErr.message !== pendingShareMsg) {
-            console.warn(
-              "[ClientMilestoneActions] dispute review prep failed:",
-              prepErr,
-            );
-          }
-          if (prepErr instanceof Error && prepErr.message === pendingShareMsg) {
-            throw prepErr;
-          }
+          console.warn(
+            "[ClientMilestoneActions] dispute review prep failed:",
+            prepErr,
+          );
           throw new Error(
             "Couldn't prepare the dispute review copy. Try again in a moment.",
           );
@@ -287,7 +388,62 @@ export function ClientMilestoneActions({
       {disputePrepMsg && (
         <p className="text-xs text-muted">{disputePrepMsg}</p>
       )}
+      {waitingForShare && (
+        <div className="rounded-lg border border-default bg-muted px-4 py-3 text-sm text-fg">
+          {waitingShareMsg}
+        </div>
+      )}
       {err && <p className="text-xs text-red-600">{err}</p>}
+      {revealed && (
+        <div className="rounded-lg border border-default bg-muted/40 px-4 py-3 text-sm text-fg space-y-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <span className="font-medium">
+              {revealed.kind === "text"
+                ? "Confidential submission"
+                : "Confidential file ready"}
+            </span>
+            {revealed.kind === "file" && (
+              <a
+                href={revealed.href}
+                download={revealed.name}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-fg hover:underline font-medium text-xs"
+              >
+                Download file ↗
+              </a>
+            )}
+          </div>
+          {revealed.kind === "text" ? (
+            revealed.href ? (
+              <a
+                href={revealed.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="break-all text-fg hover:underline"
+              >
+                {revealed.text.trim()}
+              </a>
+            ) : (
+              <pre className="whitespace-pre-wrap break-words font-sans text-sm text-fg">
+                {revealed.text}
+              </pre>
+            )
+          ) : (
+            <p className="break-all text-xs text-muted">
+              {revealed.name}
+              {revealed.mimeType !== "application/octet-stream"
+                ? ` • ${revealed.mimeType}`
+                : ""}
+            </p>
+          )}
+          {revealed.legacy && (
+            <p className="text-xs text-muted">
+              Opened from an older confidential submission format.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-2">
         <ChainGuardedAction
@@ -319,6 +475,19 @@ export function ClientMilestoneActions({
       </div>
     </div>
   );
+}
+
+function toSubmissionHref(text: string): string | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("ipfs://")) {
+    return trimmed.replace("ipfs://", "https://ipfs.io/ipfs/");
+  }
+  try {
+    return new URL(trimmed).toString();
+  } catch {
+    return null;
+  }
 }
 
 function DocIcon() {

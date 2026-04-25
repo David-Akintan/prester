@@ -14,11 +14,11 @@ import {
 import { ChainGuardedAction } from "@/app/components/ui/ChainGuardedAction";
 import {
   decryptAsRecipient,
+  encodeDeliverableManifest,
   encodePubKey,
   encryptForRecipients,
   getOrDeriveMyKeypair,
   isEnvelopeRecipient,
-  utf8Encode,
 } from "@/lib/nda";
 import type { JsonRpcSigner } from "ethers";
 
@@ -249,19 +249,18 @@ export function SubmitDeliverableButton({
   // ── NDA submit ──────────────────────────────────────────────
   async function handleSubmitNda() {
     if (!signer || !chainJobId || !jobChainId) return;
-
-    let plaintext: Uint8Array;
-    try {
-      plaintext = await readComposerBytes(file, textBody);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Couldn't read your file.");
-      return;
-    }
-    if (plaintext.byteLength === 0) {
+    if (!file && !textBody.trim()) {
       setErr("Add a file or type a message first.");
       return;
     }
 
+    let plaintext: Uint8Array;
+    try {
+      plaintext = await encodeDeliverableManifest(file, textBody);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Couldn't read your file.");
+      return;
+    }
     setErr(null);
     setWarnBanner(null);
     setStage("enabling");
@@ -385,7 +384,7 @@ export function SubmitDeliverableButton({
           <textarea
             value={textBody}
             onChange={(e) => setTextBody(e.target.value)}
-            placeholder="Type a message or paste plain text…"
+            placeholder="Paste a link or type a message…"
             rows={4}
             disabled={busy}
             className="w-full rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input)] px-4 py-2.5 text-sm text-fg placeholder-[var(--color-muted-foreground)] focus:border-[var(--color-ring)] focus:outline-none transition-colors disabled:opacity-50"
@@ -476,17 +475,6 @@ export function SubmitDeliverableButton({
 }
 
 // ─── Helpers ───────────────────────────────────────────────────
-
-async function readComposerBytes(
-  file: File | null,
-  textBody: string,
-): Promise<Uint8Array> {
-  if (file) {
-    const buf = await file.arrayBuffer();
-    return new Uint8Array(buf);
-  }
-  return utf8Encode(textBody);
-}
 
 function CheckIcon() {
   return (

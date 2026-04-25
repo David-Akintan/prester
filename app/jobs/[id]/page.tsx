@@ -6,9 +6,10 @@ import { useWallet } from "@/app/components/wallet/WalletContext";
 import { BidList } from "@/app/jobs/BidList";
 import { JobDetailSidebar } from "@/app/JobDetailSidebar";
 import { StatusBadge } from "@/app/components/ui/StatusBadge";
-import { JobRecord, jobsApi } from "@/lib/api";
+import { JobRecord, jobsApi, ndaKeysApi } from "@/lib/api";
 import { formatEth } from "@/lib/utils";
 import { getNativeSymbol } from "@/lib/chains";
+import { encodePubKey, getOrDeriveMyKeypair } from "@/lib/nda";
 import { SubmitDeliverableButton } from "./_components/SubmitDeliverableButton";
 import { ClientMilestoneActions } from "./_components/ClientMilestoneActions";
 
@@ -100,6 +101,65 @@ export default function JobDetailPage({ params }: PageProps) {
       return "freelancer";
     return "visitor";
   })();
+
+  // ── Confidential-access banner state (NDA jobs) ──────────────
+  // Show a one-click "Enable" prompt to a client or assigned freelancer
+  // that hasn't registered their confidential key for this job yet. Doing
+  // this BEFORE the freelancer submits ensures the encrypted envelope
+  // includes both parties from the start — no re-key dance needed.
+  const [needsConfidentialEnable, setNeedsConfidentialEnable] = useState(false);
+  const [confidentialEnableBusy, setConfidentialEnableBusy] = useState(false);
+  const [confidentialEnableError, setConfidentialEnableError] =
+    useState<string | null>(null);
+
+  useEffect(() => {
+    if (
+      !job ||
+      job.visibility !== "nda" ||
+      !isAuthenticated ||
+      !address ||
+      (role !== "client" && role !== "freelancer")
+    ) {
+      setNeedsConfidentialEnable(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const { keys } = await ndaKeysApi.list(job.id);
+        const has = keys.some(
+          (k) => k.address.toLowerCase() === address.toLowerCase(),
+        );
+        if (!cancelled) setNeedsConfidentialEnable(!has);
+      } catch {
+        // GET is gated to parties only — a 403 here means we shouldn't see
+        // the banner anyway, so default to false.
+        if (!cancelled) setNeedsConfidentialEnable(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [job, isAuthenticated, address, role]);
+
+  async function enableConfidentialAccess() {
+    if (!signer || !job || job.chain_id == null) return;
+    setConfidentialEnableBusy(true);
+    setConfidentialEnableError(null);
+    try {
+      const kp = await getOrDeriveMyKeypair(signer, job.id, job.chain_id);
+      await ndaKeysApi.register(job.id, encodePubKey(kp));
+      setNeedsConfidentialEnable(false);
+    } catch (err) {
+      setConfidentialEnableError(
+        err instanceof Error
+          ? err.message
+          : "Couldn't finish enabling confidential access. Please try again.",
+      );
+    } finally {
+      setConfidentialEnableBusy(false);
+    }
+  }
 
   // ── Loading skeleton ───────────────────────────────────────
   if (loading) {
@@ -262,6 +322,37 @@ export default function JobDetailPage({ params }: PageProps) {
                 onRefresh={refresh}
               />
             </section>
+          )}
+
+          {/* Confidential-access enable prompt — NDA jobs, current
+              user is the client or assigned freelancer and hasn't
+              registered a key yet. One signature, no fee. */}
+          {needsConfidentialEnable && (
+            <div className="rounded-xl border border-default bg-muted px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-fade-in-up">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-fg">
+                  🔒 Enable confidential deliveries for this job
+                </p>
+                <p className="text-xs text-muted mt-0.5">
+                  One signature so {role === "client"
+                    ? "the freelancer can share work privately with you"
+                    : "you can share work privately with the client"}. Free — no transaction.
+                </p>
+                {confidentialEnableError && (
+                  <p className="text-xs text-red-600 mt-1">
+                    {confidentialEnableError}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={enableConfidentialAccess}
+                disabled={confidentialEnableBusy || !signer}
+                className="shrink-0 rounded-lg border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-4 py-2 text-sm font-semibold text-[var(--color-background)] transition-all hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {confidentialEnableBusy ? "Enabling…" : "Enable"}
+              </button>
+            </div>
           )}
 
           {/* Milestones */}
