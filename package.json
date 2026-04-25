@@ -1,6 +1,7 @@
 {
   "name": "my-app",
   "version": "0.2.0",
+  "description": "Prester frontend application",
   "private": true,
   "scripts": {
     "dev": "next dev",
