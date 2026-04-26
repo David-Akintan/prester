@@ -5,6 +5,7 @@ import { useChainId } from "wagmi";
 import { approveMilestone, raiseDispute } from "@/lib/contracts";
 import { parseContractError } from "@/lib/utils";
 import {
+  ApiError,
   disputesApi,
   ipfsApi,
   judgesApi,
@@ -307,6 +308,11 @@ export function ClientMilestoneActions({
             "[ClientMilestoneActions] dispute review prep failed:",
             prepErr,
           );
+          if (prepErr instanceof ApiError && prepErr.status === 429) {
+            throw new Error(
+              "Server is rate-limiting requests. Please wait a moment and try again.",
+            );
+          }
           throw new Error(
             "Couldn't prepare the dispute review copy. Try again in a moment.",
           );

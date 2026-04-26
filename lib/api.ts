@@ -182,6 +182,26 @@ async function apiFetch<T>(path: string, options: ApiOptions = {}): Promise<T> {
 
   if (res.status === 204) return undefined as T;
   if (!contentType.includes("application/json")) {
+    // express-rate-limit and many proxies return text/plain on errors, so
+    // treat well-known status codes specifically before falling back to
+    // the generic "is the backend running?" message.
+    if (res.status === 429) {
+      const retryAfter = res.headers.get("retry-after");
+      throw new ApiError(
+        429,
+        "RATE_LIMITED",
+        retryAfter
+          ? `Too many requests — please retry in ${retryAfter}s.`
+          : "Too many requests — please slow down and retry shortly.",
+      );
+    }
+    if (res.status >= 500) {
+      throw new ApiError(
+        res.status,
+        "SERVER_ERROR",
+        `Server error (HTTP ${res.status}). Try again in a moment.`,
+      );
+    }
     throw new ApiError(
       res.status,
       "INVALID_RESPONSE",
@@ -503,9 +523,41 @@ export const ndaKeysApi = {
   },
 };
 
+// Judge pubkeys change rarely (admin adds/removes a judge). A short
+// in-memory cache prevents a fresh GET on every dispute attempt and
+// halves the request count of dispute-prep on NDA jobs. On a 429 we
+// fall back to the stale cache so the user can still proceed.
+const JUDGE_PUBKEYS_TTL_MS = 5 * 60 * 1000;
+let judgePubkeysCache: {
+  fetchedAt: number;
+  value: { keys: NdaKeyEntry[] };
+} | null = null;
+
 export const judgesApi = {
-  pubkeys(): Promise<{ keys: NdaKeyEntry[] }> {
-    return apiFetch(`/judges/pubkeys`);
+  async pubkeys(force = false): Promise<{ keys: NdaKeyEntry[] }> {
+    const now = Date.now();
+    const fresh =
+      !force &&
+      judgePubkeysCache &&
+      now - judgePubkeysCache.fetchedAt < JUDGE_PUBKEYS_TTL_MS;
+    if (fresh && judgePubkeysCache) return judgePubkeysCache.value;
+
+    try {
+      const result = await apiFetch<{ keys: NdaKeyEntry[] }>(
+        `/judges/pubkeys`,
+      );
+      judgePubkeysCache = { fetchedAt: now, value: result };
+      return result;
+    } catch (err) {
+      if (
+        err instanceof ApiError &&
+        err.status === 429 &&
+        judgePubkeysCache
+      ) {
+        return judgePubkeysCache.value;
+      }
+      throw err;
+    }
   },
 };
 

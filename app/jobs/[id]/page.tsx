@@ -57,11 +57,18 @@ export default function JobDetailPage({ params }: PageProps) {
   // dependencies on job fields → the interval is created exactly once
   // per [id], and the cleanup on unmount / navigation guarantees a clean
   // teardown even if a tick is mid-flight.
+  //
+  // Cadence: 10s. We also skip ticks while the tab is hidden so a
+  // backgrounded tab doesn't silently chew through the backend rate
+  // budget — relevant updates will catch up the moment the user
+  // returns and the tab becomes visible again.
   useEffect(() => {
     let ticks = 0;
-    const VERDICT_WAIT_MAX = 6; // ~30s at 5s cadence
+    const VERDICT_WAIT_MAX = 3; // ~30s at 10s cadence
 
     const interval = setInterval(async () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+
       const current = jobRef.current;
       if (!current) return;
 
@@ -84,7 +91,7 @@ export default function JobDetailPage({ params }: PageProps) {
       } catch {
         // Silent — don't surface poll errors
       }
-    }, 5_000);
+    }, 10_000);
 
     return () => clearInterval(interval);
   }, [id]);
