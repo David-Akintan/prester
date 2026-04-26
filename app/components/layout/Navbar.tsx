@@ -271,7 +271,7 @@ export default function Navbar() {
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileOpen}
               aria-controls="mobile-navigation-drawer"
-              className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-default bg-surface text-fg hover:border-[var(--color-foreground)] transition-all"
+              className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-default bg-surface text-fg hover:border-[var(--color-foreground)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-foreground)] focus-visible:ring-offset-2"
             >
               {mobileOpen ? (
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -503,7 +503,7 @@ function NotificationsList({
   }, []);
 
   return (
-    <div className="max-h-80 overflow-y-auto divide-y divide-[var(--color-border-subtle)]">
+    <div className="max-h-72 overflow-y-auto divide-y divide-[var(--color-border-subtle)]">
       {notifications.length === 0 ? (
         <div className="px-4 py-6 text-center">
           <p className="text-xs font-medium text-fg">No notifications yet.</p>

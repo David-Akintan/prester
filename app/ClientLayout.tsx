@@ -3,6 +3,7 @@
 import { WalletProvider } from "@/app/components/wallet/WalletContext";
 import { ThemeProvider } from "@/app/components/theme/ThemeProvider";
 import Navbar from "@/app/components/layout/Navbar";
+import Footer from "@/app/components/layout/Footer";
 import { OnboardingBanner } from "@/app/components/onboarding/OnboardingBanner";
 
 export default function ClientLayout({
@@ -23,6 +24,7 @@ export default function ClientLayout({
         >
           {children}
         </main>
+        <Footer />
       </WalletProvider>
     </ThemeProvider>
   );
