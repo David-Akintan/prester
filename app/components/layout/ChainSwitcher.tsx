@@ -98,9 +98,16 @@ export default function ChainSwitcher() {
                 key={id}
                 role="option"
                 aria-selected={active}
+                tabIndex={0}
                 onClick={() => handleSelect(numId)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleSelect(numId);
+                  }
+                }}
                 className={cn(
-                  "flex items-center justify-between gap-3 px-3 py-2.5 text-xs cursor-pointer transition-colors",
+                  "flex items-center justify-between gap-3 px-3 py-2.5 text-xs cursor-pointer transition-colors focus-visible:outline-none focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-foreground)]",
                   active
                     ? "bg-[var(--color-foreground)] text-[var(--color-background)]"
                     : "hover:bg-muted text-fg",
