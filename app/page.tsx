@@ -71,7 +71,7 @@ export default function Home() {
               className="group inline-flex items-center gap-3 border border-black bg-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-white transition-all hover:bg-white hover:text-black hover:shadow-xl active:scale-[0.98] animate-scaleIn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
               style={{ animationDelay: "500ms" }}
             >
-              Browse Opportunities
+              Browse Jobs
               <svg
                 className="h-5 w-5 transition-transform group-hover:translate-x-1 motion-reduce:transform-none"
                 fill="none"
@@ -91,7 +91,7 @@ export default function Home() {
               className="group inline-flex items-center gap-3 border border-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-black transition-all hover:bg-black hover:text-white hover:shadow-xl active:scale-[0.98] animate-scaleIn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
               style={{ animationDelay: "600ms" }}
             >
-              My Dashboard
+              Dashboard
               <svg
                 className="h-5 w-5 transition-transform group-hover:scale-110 motion-reduce:transform-none"
                 fill="none"
@@ -165,7 +165,7 @@ export default function Home() {
               {
                 step: "03",
                 title: "AI Resolves Disputes",
-                body: "If there's disagreement, an AI agent reviews both sides and issues a binding, on-chain verdict.",
+                body: "If there's disagreement, a group of AI agents run in parallel reviewing both sides and issue a binding, on-chain verdict.",
                 icon: (
                   <svg
                     className="h-7 w-7"
