@@ -16,6 +16,13 @@ export enum JobStatus {
   Cancelled = 3,
 }
 
+/**
+ * Lifecycle states of a single milestone within a job.
+ *
+ * Happy path: `Pending` → `Submitted` (freelancer uploads deliverable) →
+ * `Approved` (client approves; payment released). Dispute path:
+ * `Submitted` → `Disputed` → `Resolved` (judge verdict applied).
+ */
 export enum MilestoneStatus {
   Pending = 0,
   Submitted = 1,
