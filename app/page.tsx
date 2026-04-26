@@ -86,7 +86,7 @@ export default function Home() {
             </Link>
             <Link
               href="/dashboard"
-              className="group inline-flex items-center gap-3 border border-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-black transition-all hover:bg-black hover:text-white hover:shadow-xl animate-scaleIn"
+              className="group inline-flex items-center gap-3 border border-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-black transition-all hover:bg-black hover:text-white hover:shadow-xl animate-scaleIn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
               style={{ animationDelay: "600ms" }}
             >
               My Dashboard

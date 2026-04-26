@@ -213,7 +213,7 @@ export default function Navbar() {
                   {!isMiniPay && (
                     <button
                       onClick={disconnect}
-                      className="border border-default bg-surface px-3 py-1.5 text-xs font-medium uppercase tracking-wide text-fg transition-all hover:border-[var(--color-foreground)] hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)] rounded-lg"
+                      className="border border-default bg-surface px-3 py-1.5 text-xs font-medium uppercase tracking-wide text-fg transition-all hover:border-[var(--color-foreground)] hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)] rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-foreground)] focus-visible:ring-offset-2"
                     >
                       Disconnect
                     </button>
@@ -428,8 +428,7 @@ export default function Navbar() {
       {address && isWrongNetwork && (
         <div className="bg-[var(--color-foreground)] text-[var(--color-background)] text-xs font-medium uppercase tracking-wider px-4 py-2.5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
           <span>
-            Unsupported network{activeChainMeta ? "" : ""} — please switch to a
-            supported chain
+            Unsupported network — please switch to a supported chain
           </span>
           <button
             onClick={switchNetwork}
