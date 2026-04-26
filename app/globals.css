@@ -934,3 +934,17 @@ body {
   text-decoration: underline;
   text-decoration-color: var(--color-foreground);
 }
+
+/* Respect users who opt out of motion. Disable Tailwind/utility-driven
+   animations and slow transitions to a near-instant fade so the UI is still
+   responsive without large movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

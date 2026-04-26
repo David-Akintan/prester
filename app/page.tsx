@@ -188,7 +188,7 @@ export default function Home() {
                 className="relative group animate-fadeInUp"
                 style={{ animationDelay: `${1000 + i * 200}ms` }}
               >
-                <div className="border border-default bg-surface p-8 h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:border-[var(--color-foreground)]">
+                <div className="border border-default bg-surface p-6 sm:p-8 h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:border-[var(--color-foreground)]">
                   <div className="mb-8">
                     <div className="flex items-center justify-between mb-6">
                       <span className="text-3xl font-bold text-[var(--color-border)]">
@@ -216,7 +216,7 @@ export default function Home() {
 
         {/* ── Stats ────────────────────────────────────────────── */}
         <div
-          className="border border-default bg-[var(--color-foreground)] text-[var(--color-background)] p-6 sm:p-8 lg:p-12 text-center animate-fadeInUp"
+          className="border border-default bg-[var(--color-foreground)] text-[var(--color-background)] p-6 sm:p-8 lg:p-12 text-center animate-fadeInUp transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
           style={{ animationDelay: "1600ms" }}
         >
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
