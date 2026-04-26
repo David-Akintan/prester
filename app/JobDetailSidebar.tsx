@@ -198,8 +198,10 @@ export function JobDetailSidebar({
             </button>
           )}
 
-          {role === "visitor" && isAuthenticated && !myBid && (
-            job.status === "open" ? (
+          {role === "visitor" &&
+            isAuthenticated &&
+            !myBid &&
+            (job.status === "open" ? (
               <ChainGuardedAction jobChainId={job.chain_id} label="Place a Bid">
                 <button
                   onClick={() => setShowBidModal(true)}
@@ -218,8 +220,7 @@ export function JobDetailSidebar({
               >
                 Place a Bid
               </button>
-            )
-          )}
+            ))}
 
           {role === "visitor" && myBid && myBid.status === "pending" && (
             <div className="space-y-2">
@@ -285,11 +286,11 @@ export function JobDetailSidebar({
             </div>
           )}
 
-          {role === "client" && job.status === "draft" && (
+          {/* {role === "client" && job.status === "draft" && (
             <div className="border border-default px-4 py-3 text-xs text-muted rounded-lg">
               Waiting for on-chain confirmation…
             </div>
-          )}
+          )} */}
 
           {role === "client" && job.status === "open" && job.chain_job_id && (
             <ChainGuardedAction jobChainId={job.chain_id} label="Cancel Job">
@@ -427,8 +428,8 @@ export function JobDetailSidebar({
         <Modal onClose={() => setShowArchiveConfirm(false)} title="Archive Job">
           <div className="px-6 py-4">
             <p className="text-sm text-muted">
-              Archive this job? It will be hidden from your dashboard but can
-              be restored later if needed.
+              Archive this job? It will be hidden from your dashboard but can be
+              restored later if needed.
             </p>
           </div>
           <div className="border-t border-default bg-surface px-6 py-4 flex flex-col sm:flex-row gap-3">
