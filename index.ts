@@ -31,6 +31,10 @@ export enum MilestoneStatus {
   Resolved = 4,
 }
 
+/**
+ * A single milestone of a job, as fetched from the escrow contract and
+ * normalised for UI consumption. Indexed positionally within its parent job.
+ */
 export interface Milestone {
   index: number;
   amount: bigint; // wei
