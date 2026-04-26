@@ -94,12 +94,22 @@ export interface CreateJobFormData {
   milestones: MilestoneFormItem[];
 }
 
+/**
+ * A single milestone row in the create-job form. `amountEth` is a user-typed
+ * decimal string; it's parsed via `ethToWei` into a `bigint` before the
+ * transaction is sent so we never lose precision through `Number`.
+ */
 export interface MilestoneFormItem {
   description: string;
   amountEth: string; // user inputs ETH, we convert to wei before tx
 }
 
-// Reputation
+/**
+ * Per-address reputation snapshot maintained by the `Reputation` contract.
+ * Counters are cumulative; `trustScore` is a derived 0–100 value updated by
+ * the contract whenever any of the underlying counters change. Earnings and
+ * spend are denominated in wei.
+ */
 export interface ReputationScore {
   jobsCompleted: bigint;
   jobsAbandoned: bigint;

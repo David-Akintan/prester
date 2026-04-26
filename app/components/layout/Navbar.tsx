@@ -86,6 +86,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link
             href="/"
+            aria-label="Prester home"
             className="group flex items-center gap-2.5 animate-scale-in shrink-0"
           >
             <div className="flex h-8 w-8 items-center justify-center border border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-background)] transition-all group-hover:bg-[var(--color-background)] group-hover:text-[var(--color-foreground)] rounded-lg">
