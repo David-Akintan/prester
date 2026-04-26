@@ -271,7 +271,7 @@ export default function Navbar() {
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileOpen}
               aria-controls="mobile-navigation-drawer"
-              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-default bg-surface text-fg hover:border-[var(--color-foreground)] transition-all"
+              className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-default bg-surface text-fg hover:border-[var(--color-foreground)] transition-all"
             >
               {mobileOpen ? (
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -426,13 +426,17 @@ export default function Navbar() {
 
       {/* Wrong network banner */}
       {address && isWrongNetwork && (
-        <div className="bg-[var(--color-foreground)] text-[var(--color-background)] text-xs font-medium uppercase tracking-wider px-4 py-2.5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
+        <div
+          role="alert"
+          aria-live="polite"
+          className="bg-[var(--color-foreground)] text-[var(--color-background)] text-xs font-medium uppercase tracking-wider px-4 py-2.5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4"
+        >
           <span>
             Unsupported network — please switch to a supported chain
           </span>
           <button
             onClick={switchNetwork}
-            className="border border-[var(--color-background)] px-3 py-1 text-xs uppercase tracking-wide transition hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] rounded"
+            className="border border-[var(--color-background)] px-3 py-1 text-xs uppercase tracking-wide transition hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] rounded-lg"
           >
             Switch Network
           </button>
@@ -441,7 +445,11 @@ export default function Navbar() {
 
       {/* Auth/wallet error toast-ish (passive) */}
       {activeError && (
-        <div className="bg-muted border-b border-default text-fg text-xs px-4 py-2 text-center">
+        <div
+          role="alert"
+          aria-live="polite"
+          className="bg-muted border-b border-default text-fg text-xs px-4 py-2 text-center"
+        >
           {activeError}
         </div>
       )}

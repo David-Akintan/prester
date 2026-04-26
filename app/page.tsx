@@ -54,7 +54,7 @@ export default function Home() {
               Decentralized Escrow
             </span>
           </div>
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-black mb-8 leading-tight animate-slideUp">
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-black mb-8 leading-tight animate-slideUp">
             Hire talent.
             <br />
             Pay with confidence.
@@ -68,7 +68,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 animate-slideUp animation-delay-400">
             <Link
               href="/jobs"
-              className="group inline-flex items-center gap-3 border border-black bg-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-white transition-all hover:bg-white hover:text-black hover:shadow-xl animate-scaleIn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+              className="group inline-flex items-center gap-3 border border-black bg-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-white transition-all hover:bg-white hover:text-black hover:shadow-xl active:scale-[0.98] animate-scaleIn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
               style={{ animationDelay: "500ms" }}
             >
               Browse Opportunities
@@ -88,7 +88,7 @@ export default function Home() {
             </Link>
             <Link
               href="/dashboard"
-              className="group inline-flex items-center gap-3 border border-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-black transition-all hover:bg-black hover:text-white hover:shadow-xl animate-scaleIn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+              className="group inline-flex items-center gap-3 border border-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-black transition-all hover:bg-black hover:text-white hover:shadow-xl active:scale-[0.98] animate-scaleIn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
               style={{ animationDelay: "600ms" }}
             >
               My Dashboard
