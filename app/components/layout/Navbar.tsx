@@ -162,15 +162,17 @@ export default function Navbar() {
                     {isAuthenticated ? "Signed in" : "Not signed in"}
                   </span>
 
-                  <div
+                  <button
+                    type="button"
                     onClick={copyAddress}
                     title="Copy address"
+                    aria-label={`Copy wallet address ${address}`}
                     className="flex items-center gap-2 border border-default bg-surface px-3 py-2 sm:py-1.5 text-sm cursor-pointer hover:border-[var(--color-foreground)] hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)] transition-all rounded-lg max-w-[140px] sm:max-w-[160px]"
                   >
                     <span className="font-mono text-sm truncate">
                       {shortenAddress(address)}
                     </span>
-                  </div>
+                  </button>
 
                   {isAuthenticated && (
                     <div className="relative">
@@ -320,10 +322,12 @@ export default function Navbar() {
             <div className="border-t border-default pt-6 flex flex-col gap-3">
               {isConnected && address ? (
                 <>
-                  <div
+                  <button
+                    type="button"
                     onClick={copyAddress}
                     title="Copy address"
-                    className="flex items-center justify-between gap-2 border border-default bg-muted px-4 py-3 rounded-lg cursor-pointer"
+                    aria-label={`Copy wallet address ${address}`}
+                    className="flex w-full items-center justify-between gap-2 border border-default bg-muted px-4 py-3 rounded-lg cursor-pointer text-left"
                   >
                     <span className="font-mono text-sm truncate text-fg">
                       {shortenAddress(address)}
@@ -338,7 +342,7 @@ export default function Navbar() {
                     >
                       {isAuthenticated ? "Signed in" : "Unauth"}
                     </span>
-                  </div>
+                  </button>
 
                   {/* Chain switcher — mirrors desktop access on mobile */}
                   <div>
