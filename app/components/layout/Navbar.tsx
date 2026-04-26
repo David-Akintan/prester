@@ -291,7 +291,7 @@ export default function Navbar() {
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-40 animate-fade-in">
           <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
             aria-hidden="true"
           />
@@ -309,13 +309,27 @@ export default function Navbar() {
                   href={link.href}
                   aria-current={pathname === link.href ? "page" : undefined}
                   className={cn(
-                    "flex items-center px-4 py-3 text-base font-medium rounded-lg transition-all",
+                    "flex items-center justify-between px-4 py-3 text-base font-medium rounded-lg transition-all",
                     pathname === link.href
                       ? "bg-[var(--color-foreground)] text-[var(--color-background)]"
                       : "text-fg hover:bg-muted",
                   )}
                 >
-                  {link.label}
+                  <span>{link.label}</span>
+                  <svg
+                    className="h-4 w-4 opacity-60"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
                 </Link>
               ))}
             </nav>
@@ -549,7 +563,7 @@ function NotificationsDropdown({
 }) {
   return (
     <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1rem)] border border-default bg-surface shadow-2xl z-50 rounded-lg overflow-hidden">
-      <div className="border-b border-default px-4 py-3 flex items-center justify-between bg-muted">
+      <div className="border-b-2 border-[var(--color-foreground)] px-4 py-3 flex items-center justify-between bg-muted">
         <span className="text-xs font-semibold uppercase tracking-wider text-fg">
           Notifications
         </span>

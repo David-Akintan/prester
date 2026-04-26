@@ -73,7 +73,7 @@ export default function Home() {
             >
               Browse Opportunities
               <svg
-                className="h-5 w-5 transition-transform group-hover:translate-x-1 "
+                className="h-5 w-5 transition-transform group-hover:translate-x-1 motion-reduce:transform-none"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -93,7 +93,7 @@ export default function Home() {
             >
               My Dashboard
               <svg
-                className="h-5 w-5 transition-transform group-hover:scale-110"
+                className="h-5 w-5 transition-transform group-hover:scale-110 motion-reduce:transform-none"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
