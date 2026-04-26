@@ -2,6 +2,13 @@
 // Domain types mirroring the smart contract data structures
 // ─────────────────────────────────────────────────────────────
 
+/**
+ * Lifecycle states of a job, mirroring `FreelanceEscrow.JobStatus` on-chain.
+ *
+ * Transitions: `Open` → `InProgress` (when a bid is accepted) → `Completed`
+ * (when the final milestone is approved). `Cancelled` is reachable only from
+ * `Open` (no freelancer assigned yet — full refund to the client).
+ */
 export enum JobStatus {
   Open = 0,
   InProgress = 1,
