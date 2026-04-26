@@ -1,7 +1,3 @@
-// ─────────────────────────────────────────────────────────────
-// Domain types mirroring the smart contract data structures
-// ─────────────────────────────────────────────────────────────
-
 /**
  * Lifecycle states of a job, mirroring `FreelanceEscrow.JobStatus` on-chain.
  *
