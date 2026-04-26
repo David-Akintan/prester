@@ -56,6 +56,7 @@ export default function ChainSwitcher() {
         className={cn(
           "flex items-center gap-2 border border-default bg-surface px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
           "hover:border-[var(--color-foreground)] disabled:opacity-50",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-foreground)] focus-visible:ring-offset-2",
           !activeMeta && "border-red-500",
         )}
         title={activeMeta ? `Active: ${activeMeta.name}` : "Unsupported network"}
