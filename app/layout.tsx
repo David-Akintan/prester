@@ -54,7 +54,9 @@ export const metadata: Metadata = {
       "Decentralized freelance platform built on Celo with AI-powered dispute resolution",
     images: [
       {
-        url: "/globe.svg",
+        url: "/logo-full.png",
+        width: 1024,
+        height: 1024,
         alt: "Prester",
       },
     ],
