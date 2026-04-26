@@ -44,6 +44,11 @@ export interface Milestone {
   status: MilestoneStatus;
 }
 
+/**
+ * A job as stored on-chain, plus its expanded milestone list. The escrow
+ * contract returns header fields and milestone count separately; this shape
+ * unifies them for UI consumption.
+ */
 export interface Job {
   id: bigint;
   client: string; // checksummed address
