@@ -444,37 +444,57 @@ export default function JobDetailPage({ params }: PageProps) {
                           <span className="font-medium">
                             Deliverable submitted — awaiting client review
                           </span>
-                          {m.deliverable_uri && (
-                            <a
-                              href={m.deliverable_uri.replace(
-                                "ipfs://",
-                                "https://ipfs.io/ipfs/",
-                              )}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-fg hover:underline font-medium text-xs"
-                            >
-                              View deliverable ↗
-                            </a>
-                          )}
+                          {m.deliverable_uri &&
+                            (job.visibility === "nda" ? (
+                              <span
+                                title="Only the client and the assigned freelancer can view this deliverable"
+                                className="inline-flex items-center gap-1 text-xs font-medium text-muted"
+                              >
+                                🔒 Confidential
+                              </span>
+                            ) : (
+                              <a
+                                href={m.deliverable_uri.replace(
+                                  "ipfs://",
+                                  "https://ipfs.io/ipfs/",
+                                )}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-fg hover:underline font-medium text-xs"
+                              >
+                                View deliverable ↗
+                              </a>
+                            ))}
                         </div>
                       </div>
                     )}
 
-                    {/* Final deliverable link for approved/resolved */}
+                    {/* Final deliverable link for approved/resolved.
+                        For NDA jobs, only the client and assigned freelancer
+                        can see the link — visitors see a confidential
+                        indicator so the IPFS CID is never exposed. */}
                     {m.deliverable_uri && m.status !== "submitted" && (
                       <div className="mt-3">
-                        <a
-                          href={m.deliverable_uri.replace(
-                            "ipfs://",
-                            "https://ipfs.io/ipfs/",
-                          )}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-fg underline"
-                        >
-                          View Deliverable ↗
-                        </a>
+                        {job.visibility === "nda" && role === "visitor" ? (
+                          <span
+                            title="Only the client and the assigned freelancer can view this deliverable"
+                            className="inline-flex items-center gap-1.5 text-xs text-muted"
+                          >
+                            🔒 Confidential deliverable
+                          </span>
+                        ) : (
+                          <a
+                            href={m.deliverable_uri.replace(
+                              "ipfs://",
+                              "https://ipfs.io/ipfs/",
+                            )}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-fg underline"
+                          >
+                            View Deliverable ↗
+                          </a>
+                        )}
                       </div>
                     )}
                   </li>
