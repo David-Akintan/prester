@@ -14,9 +14,9 @@ export default function ClientLayout({
   return (
     <ThemeProvider>
       <WalletProvider>
-        <a href="#main-content" className="skip-link">
+        {/* <a href="#main-content" className="skip-link">
           Skip to content
-        </a>
+        </a> */}
         <Navbar />
         <main
           id="main-content"
