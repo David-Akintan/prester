@@ -449,6 +449,23 @@ export default function Navbar() {
   );
 }
 
+const relativeTimeFormatter = new Intl.RelativeTimeFormat("en", {
+  numeric: "auto",
+});
+
+function formatRelativeTime(iso: string): string {
+  const diffSec = (new Date(iso).getTime() - Date.now()) / 1000;
+  const abs = Math.abs(diffSec);
+  if (abs < 60) return relativeTimeFormatter.format(Math.round(diffSec), "second");
+  if (abs < 3600) return relativeTimeFormatter.format(Math.round(diffSec / 60), "minute");
+  if (abs < 86400) return relativeTimeFormatter.format(Math.round(diffSec / 3600), "hour");
+  if (abs < 604800) return relativeTimeFormatter.format(Math.round(diffSec / 86400), "day");
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function NotificationsList({
   notifications,
   onMarkRead,
@@ -466,9 +483,12 @@ function NotificationsList({
   return (
     <div className="max-h-80 overflow-y-auto divide-y divide-[var(--color-border-subtle)]">
       {notifications.length === 0 ? (
-        <p className="px-4 py-6 text-xs text-muted text-center">
-          No notifications yet.
-        </p>
+        <div className="px-4 py-6 text-center">
+          <p className="text-xs font-medium text-fg">No notifications yet.</p>
+          <p className="mt-1 text-xs text-muted">
+            We'll let you know when something happens on your jobs.
+          </p>
+        </div>
       ) : (
         notifications.map((n) => (
           <div
@@ -501,12 +521,7 @@ function NotificationsList({
                   {n.message}
                 </p>
                 <p className="text-xs text-muted mt-1 opacity-75">
-                  {new Date(n.created_at).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {formatRelativeTime(n.created_at)}
                 </p>
               </div>
             </div>

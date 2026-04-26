@@ -35,6 +35,8 @@ function useLiveStats() {
   return stats;
 }
 
+const numberFormatter = new Intl.NumberFormat("en-US");
+
 export default function Home() {
   const stats = useLiveStats();
 
@@ -220,15 +222,21 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             {[
               {
-                value: stats.loading ? "—" : String(stats.totalJobs),
+                value: stats.loading
+                  ? "—"
+                  : numberFormatter.format(stats.totalJobs),
                 label: "Jobs Posted",
               },
               {
-                value: stats.loading ? "—" : String(stats.activeJobs),
+                value: stats.loading
+                  ? "—"
+                  : numberFormatter.format(stats.activeJobs),
                 label: "Active Jobs",
               },
               {
-                value: stats.loading ? "—" : String(stats.completedJobs),
+                value: stats.loading
+                  ? "—"
+                  : numberFormatter.format(stats.completedJobs),
                 label: "Completed Jobs",
               },
             ].map((stat, i) => (
