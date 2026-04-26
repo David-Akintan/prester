@@ -1,8 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
-export const runtime = 'edge';
-export const dynamic = 'force-dynamic';
-export const dynamic = 'force-dynamic';
+export const runtime = "edge";
+export const dynamic = "force-dynamic";
 
 /**
  * Health check endpoint for monitoring service availability
@@ -10,14 +9,14 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   return NextResponse.json(
     {
-      status: 'healthy',
-      service: 'prester-frontend',
-      version: process.env.npm_package_version ?? 'unknown',
+      status: "healthy",
+      service: "prester-frontend",
+      version: process.env.npm_package_version ?? "unknown",
       timestamp: new Date().toISOString(),
     },
     {
       headers: {
-        'Cache-Control': 'no-store',
+        "Cache-Control": "no-store",
       },
     },
   );
