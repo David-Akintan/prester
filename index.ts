@@ -62,7 +62,11 @@ export interface Job {
   createdAt: bigint; // unix timestamp
 }
 
-// Job metadata stored on IPFS — fetched via metadataUri
+/**
+ * Off-chain job metadata pinned to IPFS at job creation time. Resolved by
+ * fetching `Job.metadataUri` through the configured IPFS gateway. Kept off
+ * chain to avoid paying gas for free-form text.
+ */
 export interface JobMetadata {
   title: string;
   description: string;
@@ -73,7 +77,12 @@ export interface JobMetadata {
   createdAt: string; // ISO 8601
 }
 
-// Form input for creating a new job
+/**
+ * Raw form state for the "Create Job" page. `tags` and `requiredSkills` are
+ * comma-separated strings here (user-friendly) and split into arrays before
+ * being persisted as `JobMetadata`. Submission flow:
+ * `CreateJobFormData` → IPFS pin → on-chain `createJob(metadataUri, …)`.
+ */
 export interface CreateJobFormData {
   title: string;
   description: string;
