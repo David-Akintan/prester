@@ -66,7 +66,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 animate-slideUp animation-delay-400">
             <Link
               href="/jobs"
-              className="group inline-flex items-center gap-3 border border-black bg-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-white transition-all hover:bg-white hover:text-black hover:shadow-xl animate-scaleIn"
+              className="group inline-flex items-center gap-3 border border-black bg-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-white transition-all hover:bg-white hover:text-black hover:shadow-xl animate-scaleIn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
               style={{ animationDelay: "500ms" }}
             >
               Browse Opportunities
