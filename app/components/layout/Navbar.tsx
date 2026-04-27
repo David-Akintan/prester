@@ -105,23 +105,23 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden items-center gap-6 md:flex">
+          <nav className="hidden items-center gap-6 md:flex ">
             {navLinks.map((link, index) => (
               <Link
                 key={link.href}
                 href={link.href}
                 aria-current={pathname === link.href ? "page" : undefined}
                 className={cn(
-                  "relative px-3 py-2 text-sm font-medium transition-all duration-200 animate-slide-up",
+                  "relative px-3 py-2 text-sm font-medium transition-all duration-200 animate-slide-up ",
                   pathname === link.href
-                    ? "text-fg font-semibold"
+                    ? "text-fg font-semibold "
                     : "text-muted hover:text-fg",
                 )}
                 style={{ animationDelay: `${index * 75}ms` }}
               >
                 {link.label}
                 {pathname === link.href && (
-                  <div className="absolute inset-x-0 -bottom-px h-0.5 bg-[var(--color-foreground)] animate-slide-in" />
+                  <div className="absolute inset-x-0 -bottom-px h-0.5 bg-[var(--color-foreground)] animate-slide-in " />
                 )}
               </Link>
             ))}
@@ -242,7 +242,7 @@ export default function Navbar() {
                   }}
                   disabled={isConnecting}
                   aria-busy={isConnecting}
-                  className="group flex items-center gap-2 border border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-background)] px-4 py-2 text-xs font-medium uppercase tracking-wide transition-all hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
+                  className="group flex items-center gap-2 border border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-background)] px-4 py-2 text-xs font-medium uppercase tracking-wide transition-all hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-lg"
                 >
                   {isConnecting ? (
                     <>
@@ -281,12 +281,32 @@ export default function Navbar() {
               className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-default bg-surface text-fg hover:border-[var(--color-foreground)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-foreground)] focus-visible:ring-offset-2"
             >
               {mobileOpen ? (
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               ) : (
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
                 </svg>
               )}
             </button>
@@ -452,9 +472,7 @@ export default function Navbar() {
           aria-live="polite"
           className="bg-[var(--color-foreground)] text-[var(--color-background)] text-xs font-medium uppercase tracking-wider px-4 py-2.5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4"
         >
-          <span>
-            Unsupported network — please switch to a supported chain
-          </span>
+          <span>Unsupported network — please switch to a supported chain</span>
           <button
             onClick={switchNetwork}
             className="border border-[var(--color-background)] px-3 py-1 text-xs uppercase tracking-wide transition hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] rounded-lg"
@@ -485,10 +503,14 @@ const relativeTimeFormatter = new Intl.RelativeTimeFormat("en", {
 function formatRelativeTime(iso: string): string {
   const diffSec = (new Date(iso).getTime() - Date.now()) / 1000;
   const abs = Math.abs(diffSec);
-  if (abs < 60) return relativeTimeFormatter.format(Math.round(diffSec), "second");
-  if (abs < 3600) return relativeTimeFormatter.format(Math.round(diffSec / 60), "minute");
-  if (abs < 86400) return relativeTimeFormatter.format(Math.round(diffSec / 3600), "hour");
-  if (abs < 604800) return relativeTimeFormatter.format(Math.round(diffSec / 86400), "day");
+  if (abs < 60)
+    return relativeTimeFormatter.format(Math.round(diffSec), "second");
+  if (abs < 3600)
+    return relativeTimeFormatter.format(Math.round(diffSec / 60), "minute");
+  if (abs < 86400)
+    return relativeTimeFormatter.format(Math.round(diffSec / 3600), "hour");
+  if (abs < 604800)
+    return relativeTimeFormatter.format(Math.round(diffSec / 86400), "day");
   return new Date(iso).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",

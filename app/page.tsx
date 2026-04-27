@@ -68,7 +68,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 animate-slideUp animation-delay-400">
             <Link
               href="/jobs"
-              className="group inline-flex items-center gap-3 border border-black bg-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-white transition-all hover:bg-white hover:text-black hover:shadow-xl active:scale-[0.98] animate-scaleIn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+              className="group inline-flex items-center gap-3 border border-black bg-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-white transition-all hover:bg-white hover:text-black hover:shadow-xl active:scale-[0.98] animate-scaleIn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 rounded-3xl"
               style={{ animationDelay: "500ms" }}
             >
               Browse Jobs
@@ -88,7 +88,7 @@ export default function Home() {
             </Link>
             <Link
               href="/dashboard"
-              className="group inline-flex items-center gap-3 border border-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-black transition-all hover:bg-black hover:text-white hover:shadow-xl active:scale-[0.98] animate-scaleIn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+              className="group inline-flex items-center gap-3 border border-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-black transition-all hover:bg-black hover:text-white hover:shadow-xl active:scale-[0.98] animate-scaleIn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 rounded-3xl"
               style={{ animationDelay: "600ms" }}
             >
               Dashboard
@@ -191,7 +191,7 @@ export default function Home() {
                 <div className="border border-default bg-surface p-6 sm:p-8 h-full transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:border-[var(--color-foreground)]">
                   <div className="mb-8">
                     <div className="flex items-center justify-between mb-6">
-                      <span className="text-3xl font-bold text-[var(--color-border)]">
+                      <span className="text-3xl font-bold text-gray-400">
                         {item.step}
                       </span>
                       <div className="flex h-12 w-12 items-center justify-center border border-[var(--color-foreground)] bg-[var(--color-foreground)] text-[var(--color-background)] transition-all group-hover:bg-[var(--color-background)] group-hover:text-[var(--color-foreground)]">

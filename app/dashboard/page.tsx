@@ -102,7 +102,7 @@ export default function DashboardPage() {
         <button
           onClick={connect}
           disabled={isConnecting}
-          className="rounded-lg border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-6 py-2.5 text-sm font-semibold text-[var(--color-background)] shadow-sm transition-all hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] disabled:opacity-60"
+          className="rounded-3xl border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-6 py-2.5 text-sm font-semibold text-[var(--color-background)] shadow-sm transition-all hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] disabled:opacity-60"
         >
           {isConnecting ? "Connecting…" : "Connect Wallet"}
         </button>
@@ -128,12 +128,16 @@ export default function DashboardPage() {
       map.set(key, (map.get(key) ?? 0n) + BigInt(j.total_amount_wei));
       return map;
     }, new Map());
-  const lockedEntries = Array.from(lockedByChain.entries()).sort(
-    (a, b) => (b[1] > a[1] ? 1 : -1),
+  const lockedEntries = Array.from(lockedByChain.entries()).sort((a, b) =>
+    b[1] > a[1] ? 1 : -1,
   );
 
-  const pendingBids = activeBids.filter((b) => b.bid_status === "pending").length;
-  const acceptedBids = activeBids.filter((b) => b.bid_status === "accepted").length;
+  const pendingBids = activeBids.filter(
+    (b) => b.bid_status === "pending",
+  ).length;
+  const acceptedBids = activeBids.filter(
+    (b) => b.bid_status === "accepted",
+  ).length;
 
   return (
     <div className="space-y-8">
