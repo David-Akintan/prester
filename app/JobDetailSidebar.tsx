@@ -129,6 +129,9 @@ export function JobDetailSidebar({
                   🔒 NDA
                 </span>
               )}
+              {job.disputes?.some((d) => d.status === "needs_review") && (
+                <StatusBadge status="needs_review" />
+              )}
               <StatusBadge status={job.status} />
             </div>
           </div>

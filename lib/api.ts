@@ -308,7 +308,14 @@ export interface DisputeRecord {
   verdict: "client" | "freelancer" | null;
   verdict_reason: string | null;
   verdict_uri: string | null;
-  status: string;
+  verdict_tx_hash: string | null;
+  status:
+    | "open"
+    | "judging"
+    | "resolved"
+    | "needs_review"
+    | string;
+  escalation_reason: string | null;
   confidence: number | null;
   milestone_description: string | null;
   created_at: string;
@@ -572,6 +579,119 @@ export const disputesApi = {
     return apiFetch(`/jobs/${jobId}/milestones/${index}/confirm-dispute`, {
       method: "POST",
       body: JSON.stringify(payload),
+    });
+  },
+};
+
+// ─── Community polls (NeedsReview vote workflow) ─────────────
+
+export type CommunityPollStatus =
+  | "open"
+  | "closed_no_quorum"
+  | "closed_tie"
+  | "recommended"
+  | "superseded";
+
+export interface CommunityPollSummary {
+  poll_id: string;
+  dispute_id: string;
+  opened_at: string;
+  closes_at: string;
+  quorum: number;
+  poll_status: CommunityPollStatus;
+  dispute_reason: string | null;
+  escalation_reason: string | null;
+  raised_by: string;
+  milestone_index: number;
+  job_id: string;
+  job_title: string;
+  job_description: string;
+  client_address: string;
+  chain_id: number | null;
+  freelancer_address: string | null;
+  visibility: "public" | "nda";
+  milestone_description: string | null;
+  amount_wei: string | null;
+  deliverable_uri: string | null;
+  client_votes: number;
+  freelancer_votes: number;
+}
+
+export interface CommunityPollDetail extends CommunityPollSummary {
+  recommended_winner: "client" | "freelancer" | null;
+  recommended_address: string | null;
+  ballot_uri: string | null;
+}
+
+export interface MyVote {
+  vote: "client" | "freelancer";
+  reason: string | null;
+  submitted_at: string;
+}
+
+export interface EligibilityVerdict {
+  eligible: boolean;
+  reason?: "no_account" | "too_new" | "no_completed_jobs";
+}
+
+export interface NeedsReviewRow {
+  id: string;
+  job_id: string;
+  chain_id: number | null;
+  chain_job_id: string | null;
+  milestone_index: number;
+  status: string;
+  escalation_reason: string | null;
+  job_title: string;
+  client_address: string;
+  freelancer_address: string | null;
+  visibility: "public" | "nda";
+  created_at: string;
+  updated_at: string;
+  // Poll fields are present when a community vote was opened.
+  poll_id: string | null;
+  poll_status: CommunityPollStatus | null;
+  poll_closes_at: string | null;
+  recommended_winner: "client" | "freelancer" | null;
+  recommended_address: string | null;
+  ballot_uri: string | null;
+  poll_client_votes: number | null;
+  poll_freelancer_votes: number | null;
+}
+
+export const adminApi = {
+  needsReview(): Promise<{ disputes: NeedsReviewRow[] }> {
+    return apiFetch(`/admin/disputes/needs-review`);
+  },
+  retry(disputeId: string): Promise<{ status: string; message: string }> {
+    return apiFetch(`/admin/disputes/${disputeId}/retry`, { method: "POST" });
+  },
+};
+
+export const communityPollsApi = {
+  /** Per-caller eligibility verdict — used by the navbar gate. */
+  eligibility(): Promise<EligibilityVerdict> {
+    return apiFetch(`/community-polls/eligibility`);
+  },
+  listOpen(): Promise<{ polls: CommunityPollSummary[] }> {
+    return apiFetch(`/community-polls/open`);
+  },
+  get(id: string): Promise<{
+    poll: CommunityPollDetail;
+    myVote: MyVote | null;
+    eligibility: EligibilityVerdict;
+    conflicted: boolean;
+  }> {
+    return apiFetch(`/community-polls/${id}`);
+  },
+  vote(
+    id: string,
+    vote: "client" | "freelancer",
+    reason?: string,
+  ): Promise<{ ok: true }> {
+    return apiFetch(`/community-polls/${id}/vote`, {
+      method: "POST",
+      body: JSON.stringify({ vote, reason }),
     });
   },
 };

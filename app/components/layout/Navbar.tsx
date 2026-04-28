@@ -38,6 +38,8 @@ export default function Navbar() {
     walletError,
     authError,
     isMiniPay,
+    voteEligibility,
+    isAdmin,
     clearAuthError,
     connect,
     disconnect,
@@ -59,6 +61,17 @@ export default function Navbar() {
     { href: "/jobs", label: "Browse Jobs" },
     { href: "/jobs/new", label: "Post a Job" },
     { href: "/dashboard", label: "Dashboard" },
+    // Surface the voting page only to wallets that meet the eligibility
+    // gate, so we don't tease the link to everyone. Eligibility is cached
+    // on WalletContext so this doesn't trigger a fetch on every render.
+    ...(voteEligibility?.eligible
+      ? [{ href: "/disputes/vote", label: "Vote on Disputes" }]
+      : []),
+    // Admin link — visible only when the connected wallet is on the
+    // backend allowlist. Probed once on auth via WalletContext.
+    ...(isAdmin
+      ? [{ href: "/admin/needs-review", label: "Admin · Review" }]
+      : []),
   ];
 
   // Close mobile drawer on route change

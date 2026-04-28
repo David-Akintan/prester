@@ -60,8 +60,14 @@ function bidRowToJob(row: FreelancerBidRow, address: string): JobRecord {
 }
 
 export default function DashboardPage() {
-  const { address, isConnected, isAuthenticated, connect, isConnecting } =
-    useWallet();
+  const {
+    address,
+    isConnected,
+    isAuthenticated,
+    connect,
+    isConnecting,
+    isAdmin,
+  } = useWallet();
   const { postedJobs, activeBids, loading, error } = useJob(address);
   const {
     dashboard: freelancerData,
@@ -149,12 +155,26 @@ export default function DashboardPage() {
             {shortenAddress(address!)}
           </p>
         </div>
-        <Link
-          href="/jobs/new"
-          className="self-start rounded-lg border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-4 py-2 text-sm font-semibold text-[var(--color-background)] shadow-sm transition-all hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)] sm:self-auto"
-        >
-          + Post a Job
-        </Link>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          {/* Admin shortcut — surfaces only when the connected wallet is on
+              the backend ADMIN_ADDRESSES allowlist. Same gate as the navbar
+              link; rendered here too so admins land on /admin/needs-review
+              without leaving the dashboard. */}
+          {isAdmin && (
+            <Link
+              href="/admin/needs-review"
+              className="rounded-lg border border-default bg-surface px-4 py-2 text-sm font-medium text-fg shadow-sm transition-all hover:border-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-foreground)] focus-visible:ring-offset-2"
+            >
+              Review Disputes →
+            </Link>
+          )}
+          <Link
+            href="/jobs/new"
+            className="rounded-lg border border-[var(--color-foreground)] bg-[var(--color-foreground)] px-4 py-2 text-sm font-semibold text-[var(--color-background)] shadow-sm transition-all hover:bg-[var(--color-background)] hover:text-[var(--color-foreground)]"
+          >
+            + Post a Job
+          </Link>
+        </div>
       </div>
 
       {/* Tabs */}

@@ -512,6 +512,60 @@ export default function JobDetailPage({ params }: PageProps) {
             )}
           </section>
 
+          {/* Disputes currently in NeedsReview — escalation banner. The
+              dispute is parked: AI judges couldn't reach a verdict and the
+              contract owner has to step in. We surface a link to the
+              community vote page so eligible voters can recommend a winner. */}
+          {job.disputes &&
+            job.disputes.some((d) => d.status === "needs_review") && (
+              <section className="animate-fade-in-up">
+                <SectionHeading>Disputes Awaiting Review</SectionHeading>
+                <div className="space-y-4">
+                  {job.disputes
+                    .filter((d) => d.status === "needs_review")
+                    .map((dispute) => (
+                      <div
+                        key={dispute.id}
+                        className="rounded-xl border border-default bg-surface p-5 space-y-3"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-fg">
+                              Milestone {dispute.milestone_index + 1} —
+                              Awaiting human review
+                            </p>
+                            {dispute.milestone_description && (
+                              <p className="mt-1 text-sm text-muted">
+                                {dispute.milestone_description}
+                              </p>
+                            )}
+                          </div>
+                          <StatusBadge status="needs_review" />
+                        </div>
+                        {dispute.escalation_reason && (
+                          <div className="bg-muted p-3 rounded-lg border border-subtle">
+                            <p className="text-xs font-medium text-fg mb-1">
+                              Why it escalated:
+                            </p>
+                            <p className="text-sm text-muted">
+                              {dispute.escalation_reason}
+                            </p>
+                          </div>
+                        )}
+                        {job.visibility !== "nda" && (
+                          <Link
+                            href="/disputes/vote"
+                            className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-fg underline"
+                          >
+                            View community vote ↗
+                          </Link>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </section>
+            )}
+
           {/* Completion summary + disputes */}
           {job.status === "completed" && (
             <section className="animate-fade-in-up">
@@ -556,7 +610,9 @@ export default function JobDetailPage({ params }: PageProps) {
                         {dispute.verdict_reason && (
                           <div className="bg-muted p-3 rounded-lg border border-subtle">
                             <p className="text-xs font-medium text-fg mb-1">
-                              AI Reasoning:
+                              {dispute.verdict_reason.startsWith("Emergency resolved")
+                                ? "Resolved by platform owner:"
+                                : "AI Reasoning:"}
                             </p>
                             <p className="text-sm text-muted">
                               {dispute.verdict_reason}

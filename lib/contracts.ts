@@ -268,3 +268,41 @@ export async function cancelJob(
   const tx = await contract.cancelJob(jobId);
   return tx.wait();
 }
+
+/**
+ * Read the FreelanceEscrow's `owner()` for a given chain. Used by the admin
+ * needs-review page to gate UI to the contract owner only. Cheap because
+ * read-only.
+ */
+export async function getEscrowOwner(chainId: number): Promise<string> {
+  const contract = getEscrowContract(undefined, chainId);
+  return (await contract.owner()) as string;
+}
+
+/**
+ * Owner-only escape hatch for disputes that escalated to NeedsReview.
+ * Wraps `FreelanceEscrow.emergencyResolveDispute(jobId, milestoneIndex, winner)`
+ * so the admin UI can fire it from the connected wallet.
+ *
+ * The corresponding `EmergencyResolved` event is consumed by the backend
+ * chain listener, which resolves the dispute and milestone rows + sends
+ * notifications to both parties.
+ */
+export async function emergencyResolveDispute(
+  signer: JsonRpcSigner,
+  jobId: bigint,
+  milestoneIndex: bigint,
+  winnerAddress: string,
+  chainId?: number,
+): Promise<ethers.TransactionReceipt> {
+  if (!ethers.isAddress(winnerAddress)) {
+    throw new Error(`Invalid winner address: ${winnerAddress}`);
+  }
+  const contract = await contractForSigner(signer, chainId);
+  const tx = await contract.emergencyResolveDispute(
+    jobId,
+    milestoneIndex,
+    winnerAddress,
+  );
+  return tx.wait();
+}

@@ -21,6 +21,12 @@ import { BrowserProvider, JsonRpcSigner } from "ethers";
 import { useAuth, type AuthState } from "@/hooks/useAuth";
 import { useMiniPay } from "@/hooks/useMiniPay";
 import { isSupportedChain, DEFAULT_CHAIN_ID } from "@/lib/chains";
+import {
+  adminApi,
+  ApiError,
+  communityPollsApi,
+  type EligibilityVerdict,
+} from "@/lib/api";
 
 export type ConnectStep =
   | "idle"
@@ -41,6 +47,19 @@ interface WalletContextType extends AuthState {
   isWrongNetwork: boolean;
   walletError: string | null;
   isMiniPay: boolean;
+  /**
+   * Cached community-vote eligibility for the connected user. Null while
+   * loading (or when the user isn't authenticated). Refetched once per
+   * authenticated address change.
+   */
+  voteEligibility: EligibilityVerdict | null;
+  /**
+   * True when the connected wallet is on the backend admin allowlist
+   * (ADMIN_ADDRESSES env). Probed once on auth via the existing
+   * `GET /admin/disputes/needs-review` endpoint — 200 = admin, 403 = not.
+   * Null while the probe is in flight.
+   */
+  isAdmin: boolean | null;
   connect: () => Promise<void>;
   disconnect: () => void;
   switchNetwork: () => Promise<void>;
@@ -65,6 +84,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [signer, setSigner] = useState<JsonRpcSigner | null>(null);
   const [connectStep, setConnectStep] = useState<ConnectStep>("idle");
   const [walletError, setWalletError] = useState<string | null>(null);
+  const [voteEligibility, setVoteEligibility] =
+    useState<EligibilityVerdict | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   const auth = useAuth();
   const signInRef = useRef(auth.signIn);
@@ -190,8 +212,71 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setSigner(null);
     setConnectStep("idle");
     setWalletError(null);
+    setVoteEligibility(null);
+    setIsAdmin(null);
     auth.signOut();
   }, [wagmiDisconnect, auth]);
+
+  // ── Community-vote eligibility cache ─────────────────────
+  // Re-fetch when the authenticated address changes. Single round-trip
+  // server-side; result is consumed by the navbar gate and the voting
+  // page so we don't refetch on every render.
+  useEffect(() => {
+    if (!auth.isAuthenticated || !address) {
+      setVoteEligibility(null);
+      return;
+    }
+    let cancelled = false;
+    communityPollsApi
+      .eligibility()
+      .then((result) => {
+        if (!cancelled) setVoteEligibility(result);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        // 401/forbidden / rate-limit: leave as null so the navbar simply
+        // hides the link rather than flickering an error.
+        if (!(err instanceof ApiError)) {
+          console.warn("[WalletContext] eligibility fetch failed:", err);
+        }
+        setVoteEligibility({ eligible: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.isAuthenticated, address]);
+
+  // ── Admin allowlist probe ────────────────────────────────
+  // Hit the admin needs-review endpoint once. 200 means we're on the
+  // ADMIN_ADDRESSES allowlist; 403 means we aren't. We discard the
+  // payload — this is a presence-only check used to gate the navbar
+  // link to the admin dashboard.
+  useEffect(() => {
+    if (!auth.isAuthenticated || !address) {
+      setIsAdmin(null);
+      return;
+    }
+    let cancelled = false;
+    adminApi
+      .needsReview()
+      .then(() => {
+        if (!cancelled) setIsAdmin(true);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err instanceof ApiError && err.status === 403) {
+          setIsAdmin(false);
+        } else {
+          // Anything else (rate limit, transient 5xx) — leave as null so
+          // the link stays hidden but we don't burn a "false" cache that
+          // would suppress it on a later successful retry.
+          setIsAdmin(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.isAuthenticated, address]);
 
   // ── Switch to a supported chain (default: DEFAULT_CHAIN_ID) ──
   const switchNetwork = useCallback(async () => {
@@ -218,6 +303,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           wagmiChainId != null && !isSupportedChain(wagmiChainId),
         walletError,
         isMiniPay,
+        voteEligibility,
+        isAdmin,
         connect,
         disconnect,
         switchNetwork,
