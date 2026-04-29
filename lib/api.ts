@@ -212,11 +212,16 @@ async function apiFetch<T>(path: string, options: ApiOptions = {}): Promise<T> {
   const data = await res.json();
 
   if (!res.ok) {
-    // Silent-session-expiry: the token is stale (expired / signed with the
-    // pre-rotation JWT_SECRET / address mismatch). Clear locally so the
-    // next apiFetch doesn't retry with the same dead token, and let the
-    // wallet context know so UI can flip to Connect.
-    if (res.status === 401 || res.status === 403) {
+    // Silent-session-expiry: the token is stale (expired / signed with
+    // the pre-rotation JWT_SECRET / address mismatch). Clear locally so
+    // the next apiFetch doesn't retry with the same dead token, and let
+    // the wallet context know so UI can flip to Connect.
+    //
+    // Only 401 (unauthenticated) is treated as a session issue. 403
+    // (forbidden) means the JWT is fine but the action isn't allowed —
+    // e.g. CONFLICTED / NOT_ELIGIBLE / FORBIDDEN. Treating those as
+    // logouts was incorrect and surfaced the wrong message to users.
+    if (res.status === 401) {
       clearToken();
       if (typeof window !== "undefined") {
         localStorage.removeItem("fl3_token_issued");
@@ -665,6 +670,24 @@ export const adminApi = {
   },
   retry(disputeId: string): Promise<{ status: string; message: string }> {
     return apiFetch(`/admin/disputes/${disputeId}/retry`, { method: "POST" });
+  },
+  /**
+   * Tell the backend a successful `emergencyResolveDispute` tx just landed.
+   * The backend re-fetches the receipt to verify the EmergencyResolved
+   * event was actually emitted (so a malicious admin can't lie), then
+   * applies the same DB updates the chain listener would. Idempotent.
+   */
+  confirmEmergencyResolve(
+    disputeId: string,
+    payload: { tx_hash: string; chain_id: number },
+  ): Promise<{ ok: true; winner: string }> {
+    return apiFetch(
+      `/admin/disputes/${disputeId}/confirm-emergency-resolve`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    );
   },
 };
 

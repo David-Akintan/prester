@@ -133,7 +133,10 @@ export default function AdminNeedsReviewPage() {
                 connectedAddress={address}
                 connectedChainId={wagmiChainId}
                 signer={signer}
-                onResolved={refresh}
+                onResolvedLocally={(disputeId) =>
+                  setRows((prev) => prev.filter((r) => r.id !== disputeId))
+                }
+                onRefresh={refresh}
               />
             </li>
           ))}
@@ -148,13 +151,22 @@ function NeedsReviewCard({
   connectedAddress,
   connectedChainId,
   signer,
-  onResolved,
+  onResolvedLocally,
+  onRefresh,
 }: {
   row: NeedsReviewRow;
   connectedAddress: string | null;
   connectedChainId: number | null;
   signer: ReturnType<typeof useWallet>["signer"];
-  onResolved: () => Promise<void>;
+  /**
+   * Immediately remove this dispute from the displayed list once the
+   * on-chain tx is confirmed. The backend sync (chain listener / confirm
+   * endpoint / 5-min reconciler) is best-effort — what's source of truth
+   * is the on-chain receipt the caller just got back.
+   */
+  onResolvedLocally: (disputeId: string) => void;
+  /** Backstop refetch — kicks the indexer cache. */
+  onRefresh: () => Promise<void>;
 }) {
   const [winnerInput, setWinnerInput] = useState(
     row.recommended_address ?? "",
@@ -210,18 +222,45 @@ function NeedsReviewCard({
     setSubmitting(true);
     setFeedback(null);
     try {
-      await emergencyResolveDispute(
+      const receipt = await emergencyResolveDispute(
         signer,
         BigInt(row.chain_job_id),
         BigInt(row.milestone_index),
         winnerInput.trim(),
         row.chain_id,
       );
-      setFeedback(
-        "Resolved on-chain. Listener will update the DB shortly — refreshing.",
-      );
-      // Give the chain listener a beat to write before we refetch.
-      setTimeout(onResolved, 4_000);
+
+      // The on-chain tx has confirmed — the dispute IS resolved
+      // regardless of whether the backend has caught up yet. Drop the
+      // row from the visible list immediately so the user sees the
+      // result, then push the backend to update.
+      onResolvedLocally(row.id);
+      setFeedback("Resolved on-chain. Syncing backend…");
+
+      // Tell the backend immediately rather than waiting for the WS
+      // listener — many public RPC endpoints (e.g. forno.celo.org) don't
+      // expose a stable WebSocket, so the listener may never fire. The
+      // backend re-verifies the receipt and then applies the same DB
+      // writes idempotently.
+      try {
+        await adminApi.confirmEmergencyResolve(row.id, {
+          tx_hash: receipt.hash,
+          chain_id: row.chain_id,
+        });
+        setFeedback("Dispute resolved.");
+      } catch (confirmErr) {
+        // The local state is already cleared, but warn the user the
+        // backend sync didn't go through. The 5-min reconciliation cron
+        // will catch up regardless.
+        const detail =
+          confirmErr instanceof Error ? confirmErr.message : String(confirmErr);
+        setFeedback(
+          `Resolved on-chain. Backend sync failed (${detail}). Will reconcile within ~5 min, or restart the backend if it's not running the latest code.`,
+        );
+      }
+      // Backstop refetch — picks up listener-driven updates and clears
+      // any other stale rows.
+      onRefresh().catch(() => undefined);
     } catch (err) {
       setFeedback(
         err instanceof Error
@@ -239,7 +278,9 @@ function NeedsReviewCard({
     try {
       const result = await adminApi.retry(row.id);
       setFeedback(result.message || "Retry queued.");
-      setTimeout(onResolved, 4_000);
+      setTimeout(() => {
+        onRefresh().catch(() => undefined);
+      }, 4_000);
     } catch (err) {
       setFeedback(
         err instanceof ApiError

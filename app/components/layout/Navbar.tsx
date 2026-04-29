@@ -67,11 +67,8 @@ export default function Navbar() {
     ...(voteEligibility?.eligible
       ? [{ href: "/disputes/vote", label: "Vote on Disputes" }]
       : []),
-    // Admin link — visible only when the connected wallet is on the
-    // backend allowlist. Probed once on auth via WalletContext.
-    ...(isAdmin
-      ? [{ href: "/admin/needs-review", label: "Admin · Review" }]
-      : []),
+
+    ...(isAdmin ? [{ href: "/admin/needs-review", label: "Admin" }] : []),
   ];
 
   // Close mobile drawer on route change
