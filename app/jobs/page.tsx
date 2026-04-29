@@ -95,7 +95,7 @@ export default function JobsPage() {
         <div className="mb-8 animate-slideUp animation-delay-400">
           <div className="flex flex-col gap-4 sm:gap-6 border border-black bg-white p-4 sm:p-6 sm:flex-row sm:items-center sm:justify-between transition-all duration-300 hover:shadow-lg">
             {/* Status tabs */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-400 whitespace-nowrap">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -104,14 +104,14 @@ export default function JobsPage() {
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                   className="lucide lucide-funnel w-4 h-4"
                   aria-hidden="true"
                 >
                   <path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"></path>
-                </svg>{" "}
+                </svg>
                 Filter:
               </div>
               {STATUSES.map((s, index) => (
@@ -135,33 +135,35 @@ export default function JobsPage() {
 
             {/* Category filter */}
             <div className="flex items-center gap-3">
-              <span className="text-xs font-medium text-neutral-400 uppercase tracking-widest">
+              <span className="text-xs font-medium text-neutral-400 uppercase tracking-widest whitespace-nowrap">
                 Category
               </span>
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="border border-black bg-white px-4 py-2 text-xs uppercase tracking-wide text-black focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 cursor-pointer appearance-none bg-image-none transition-all duration-200 hover:shadow-md"
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c === "All" ? "" : c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-              <svg
-                className="h-4 w-4 text-black pointer-events-none animate-bounce"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+              <div className="relative flex-1 sm:flex-initial">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full border border-black bg-white pl-4 pr-10 py-2 text-xs uppercase tracking-wide text-black focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 cursor-pointer appearance-none transition-all duration-200 hover:shadow-md"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c === "All" ? "" : c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <svg
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-black pointer-events-none"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
             </div>
           </div>
         </div>

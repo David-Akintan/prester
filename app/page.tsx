@@ -44,8 +44,8 @@ export default function Home() {
     <div className="min-h-screen animate-fadeIn">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         {/* ── Hero ──────────────────────────────────────────── */}
-        <div className="mb-16 md:mb-24 animate-slideDown">
-          <div className="flex items-baseline gap-3 mb-8">
+        <div className="mb-16 md:mb-24 animate-slideDown text-center">
+          <div className="flex items-baseline justify-center gap-3 mb-8">
             <span className="text-xs font-mono text-neutral-400 uppercase tracking-widest animate-pulse">
               Prester
             </span>
@@ -59,13 +59,13 @@ export default function Home() {
             <br />
             Pay with confidence.
           </h1>
-          <p className="text-xl text-neutral-500 max-w-3xl mb-12 leading-relaxed animate-slideUp animation-delay-200">
+          <p className="text-xl text-neutral-500 max-w-3xl mx-auto mb-12 leading-relaxed animate-slideUp animation-delay-200">
             Post opportunities, lock payment in escrow, and let AI resolve
             disputes. No middlemen. No chargebacks. No excuses.
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 animate-slideUp animation-delay-400">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4 sm:gap-6 animate-slideUp animation-delay-400">
             <Link
               href="/jobs"
               className="group inline-flex items-center gap-3 border border-black bg-black px-10 py-5 text-sm font-medium uppercase tracking-widest text-white transition-all hover:bg-white hover:text-black hover:shadow-xl active:scale-[0.98] animate-scaleIn focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 rounded-3xl"

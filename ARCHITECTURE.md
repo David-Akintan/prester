@@ -31,7 +31,7 @@ Prester consists of three layers:
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                       Client (browser)                           │
-│   Next.js 15 · wagmi + viem · SIWE · IPFS upload · MetaMask      │
+│   Next.js 15 · wagmi + viem · SIWE · IPFS upload · Wallet        │
 └──────────────────────────────────────────────────────────────────┘
                                 │
                    HTTPS (JSON) │ SIWE-authenticated sessions
@@ -62,6 +62,8 @@ Everything above the JSON-RPC line is horizontally scalable and non-custodial. E
 
 ### 3.1 FreelanceEscrow
 
+<!-- update source by linking the contract deployment on explorer -->
+
 Source: [`contracts/contracts/FreelanceEscrow.sol`](contracts/contracts/FreelanceEscrow.sol)
 
 Holds client funds for the lifetime of a job. A job is a client-owned record containing an ordered list of milestones. Each milestone has a payout amount, a description, a deliverable URI (IPFS), and a status machine:
@@ -86,6 +88,8 @@ Pending ──submit──▶ Submitted ──approve──▶ Approved
 - `JudgeRegistry`-only: `executeVerdict`.
 
 ### 3.2 JudgeRegistry
+
+<!-- update source by linking the contract deployment on explorer -->
 
 Source: [`contracts/contracts/JudgeRegistry.sol`](contracts/contracts/JudgeRegistry.sol)
 
@@ -168,6 +172,7 @@ struct Score {
 ```
 
 **Anti-sybil:**
+
 - New addresses start at score 0 (no implicit trust).
 - Activity older than `DECAY_PERIOD = 180 days` has its weight halved in the composite trust score — a long-dormant account isn't "locked in" as elite.
 
@@ -299,20 +304,20 @@ The frontend already has a chain entry [`minitiaEvm` in chains.ts:16](frontend/m
 
 ### 6.2 Adversarial scenarios
 
-| Attack                                                          | Mitigation                                                                                                                |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| A client tries to approve their own dispute                     | Contract: `disputeMilestone` is `onlyFreelancer`, `approveMilestone` is `onlyClient`                                      |
-| A freelancer submits the same deliverable twice                 | Off-chain dedup by IPFS CID; on-chain status machine blocks re-submission on `Submitted`                                  |
-| A judge commits, then refuses to reveal                         | Contract: missing reveals reduce effective quorum; falls to `NeedsReview` if unique-majority condition breaks             |
-| Two judges collude on a winner                                  | Commit is `keccak256(winner, reasonHash, salt)` — neither can see what the other committed; off-chain coordination caught by auditable `reasonHash` on IPFS |
-| A front-runner sees a commit and tries to replay it             | `salt` is 32-byte random; commit is per-(judge, dispute) and bound to caller's address                                    |
-| Replay of a SIWE message on a different origin                  | Backend rejects if `fields.domain` or `fields.uri` mismatch the configured app origin                                     |
-| A stolen JWT                                                    | 7-day expiry; 401/403 from any endpoint dispatches a frontend `auth:expired` event that clears session and prompts re-SIWE |
-| Weak `JWT_SECRET` in production                                 | Config refuses to boot when `NODE_ENV=production` and `JWT_SECRET` is <32 chars or matches a known default                |
-| Unbounded `auth_nonces` growth                                  | Hourly cron deletes expired nonces                                                                                        |
-| Double-processing an event (live listener AND reconcile)        | Unique index on `(chain_id, block_number, tx_hash, log_index)` in `processed_events`                                      |
-| Double-notifying for the same event                             | `idempotency_key = sha256(address || type || canonical(metadata))` with `ON CONFLICT DO NOTHING`                          |
-| Cross-chain job-ID collision                                    | `chain_id` in every query; unique index is `(chain_id, chain_job_id, milestone_index)`                                    |
+| Attack                                                   | Mitigation                                                                                                                                                  |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | --- | ---- | --- | ------------------------------------------------- |
+| A client tries to approve their own dispute              | Contract: `disputeMilestone` is `onlyFreelancer`, `approveMilestone` is `onlyClient`                                                                        |
+| A freelancer submits the same deliverable twice          | Off-chain dedup by IPFS CID; on-chain status machine blocks re-submission on `Submitted`                                                                    |
+| A judge commits, then refuses to reveal                  | Contract: missing reveals reduce effective quorum; falls to `NeedsReview` if unique-majority condition breaks                                               |
+| Two judges collude on a winner                           | Commit is `keccak256(winner, reasonHash, salt)` — neither can see what the other committed; off-chain coordination caught by auditable `reasonHash` on IPFS |
+| A front-runner sees a commit and tries to replay it      | `salt` is 32-byte random; commit is per-(judge, dispute) and bound to caller's address                                                                      |
+| Replay of a SIWE message on a different origin           | Backend rejects if `fields.domain` or `fields.uri` mismatch the configured app origin                                                                       |
+| A stolen JWT                                             | 7-day expiry; 401/403 from any endpoint dispatches a frontend `auth:expired` event that clears session and prompts re-SIWE                                  |
+| Weak `JWT_SECRET` in production                          | Config refuses to boot when `NODE_ENV=production` and `JWT_SECRET` is <32 chars or matches a known default                                                  |
+| Unbounded `auth_nonces` growth                           | Hourly cron deletes expired nonces                                                                                                                          |
+| Double-processing an event (live listener AND reconcile) | Unique index on `(chain_id, block_number, tx_hash, log_index)` in `processed_events`                                                                        |
+| Double-notifying for the same event                      | `idempotency_key = sha256(address                                                                                                                           |     | type |     | canonical(metadata))`with`ON CONFLICT DO NOTHING` |
+| Cross-chain job-ID collision                             | `chain_id` in every query; unique index is `(chain_id, chain_job_id, milestone_index)`                                                                      |
 
 ### 6.3 Known limitations
 
@@ -327,19 +332,19 @@ The frontend already has a chain entry [`minitiaEvm` in chains.ts:16](frontend/m
 
 ### 7.1 Key tables
 
-| Table                | Purpose                                                                 |
-| -------------------- | ----------------------------------------------------------------------- |
-| `users`              | SIWE-authenticated addresses, optional profile                          |
-| `auth_nonces`        | SIWE challenge nonces, hourly-pruned                                    |
-| `jobs`               | Job records mirrored from on-chain `FreelanceEscrow.createJob`          |
-| `milestones`         | Per-milestone state + deliverable IPFS URIs                             |
-| `bids`               | Freelancer bids (stored off-chain only)                                 |
+| Table                | Purpose                                                                   |
+| -------------------- | ------------------------------------------------------------------------- |
+| `users`              | SIWE-authenticated addresses, optional profile                            |
+| `auth_nonces`        | SIWE challenge nonces, hourly-pruned                                      |
+| `jobs`               | Job records mirrored from on-chain `FreelanceEscrow.createJob`            |
+| `milestones`         | Per-milestone state + deliverable IPFS URIs                               |
+| `bids`               | Freelancer bids (stored off-chain only)                                   |
 | `disputes`           | One row per disputed milestone; carries `pipeline_phase` for resumability |
-| `judge_verdicts`     | One row per (dispute, judge) — salt, reasonHash, commitHash, outcome   |
-| `notifications`      | Per-user events; dedup via `idempotency_key`                            |
-| `dead_letter_events` | Events whose handler threw; replayed on boot and retried up to 5×       |
-| `processed_events`   | Idempotency ledger for the reconcile path                               |
-| `app_config`         | KV store — IPFS pending uploads, feature flags, etc.                    |
+| `judge_verdicts`     | One row per (dispute, judge) — salt, reasonHash, commitHash, outcome      |
+| `notifications`      | Per-user events; dedup via `idempotency_key`                              |
+| `dead_letter_events` | Events whose handler threw; replayed on boot and retried up to 5×         |
+| `processed_events`   | Idempotency ledger for the reconcile path                                 |
+| `app_config`         | KV store — IPFS pending uploads, feature flags, etc.                      |
 
 See [`backend/src/db/migrations/`](backend/src/db/migrations/) for the authoritative schema. Migrations are auto-discovered in lexical order; the migrator records applied filenames in `_migrations`.
 
@@ -358,14 +363,14 @@ idx_notifications_idem           -- dedup partial unique on idempotency_key
 
 ## 8. Performance targets
 
-| Operation                            | Target    | Current  |
-| ------------------------------------ | --------- | -------- |
-| SIWE sign-in round-trip              | < 1s      | ~400ms   |
-| Job create (frontend → tx confirmed) | < 30s     | ~15s     |
-| Milestone submit                     | < 10s     | ~8s      |
-| Dispute resolution end-to-end        | < 15 min  | ~11 min  |
-| Dashboard load (cold)                | < 500ms   | ~300ms   |
-| Event listener → DB row              | < 2s      | ~500ms   |
+| Operation                            | Target   | Current |
+| ------------------------------------ | -------- | ------- |
+| SIWE sign-in round-trip              | < 1s     | ~400ms  |
+| Job create (frontend → tx confirmed) | < 30s    | ~15s    |
+| Milestone submit                     | < 10s    | ~8s     |
+| Dispute resolution end-to-end        | < 15 min | ~11 min |
+| Dashboard load (cold)                | < 500ms  | ~300ms  |
+| Event listener → DB row              | < 2s     | ~500ms  |
 
 The dispute resolution target is dominated by the 5+5 min commit/reveal windows — those are configurable in `JudgeRegistry.setWindows()`.
 
@@ -420,29 +425,11 @@ The RPC check iterates `config.chains` — a failed chain pokes `degraded` statu
 
 ---
 
-## 10. Roadmap
-
-| Phase | Scope                                                                           | Status     |
-| ----- | ------------------------------------------------------------------------------- | ---------- |
-| 1     | Critical bug fixes on v1 contracts                                              | Done       |
-| 2     | Contract rewrite — multi-judge commit-reveal, deadline mechanics, reputation v2 | Done       |
-| 3     | Initia Minitia EVM rollup + IBC cross-chain payments                            | Stubbed    |
-| 4     | Three-judge backend pipeline                                                    | Done       |
-| 5     | Frontend modernization (dashboard, notifications, mobile)                       | In progress |
-| 6     | Grant packaging (whitepaper, demo, applications)                                | Active     |
-| 7     | Professional contract audit + mainnet launch                                    | Future     |
-| 8     | Reputation-weighted judge selection                                             | Future     |
-| 9     | Human-review UI for `NeedsReview` escalations                                   | Future     |
-| 10    | Protocol generalization — grant-program and bug-bounty adapters                 | Future     |
-
----
-
-## 11. References
+## 10. References
 
 - Commit–reveal in Ethereum: [EIP-2929 gas cost rationale (discusses front-running)](https://eips.ethereum.org/EIPS/eip-2929)
 - SIWE: [EIP-4361](https://eips.ethereum.org/EIPS/eip-4361)
 - Kleros dispute protocol (contrast case): [kleros.io/whitepaper.pdf](https://kleros.io/whitepaper.pdf)
-- Initia Minitia documentation: [docs.initia.xyz](https://docs.initia.xyz)
 - OpenZeppelin contracts (v5): [docs.openzeppelin.com/contracts/5.x](https://docs.openzeppelin.com/contracts/5.x)
 
 ---
@@ -474,9 +461,9 @@ export interface DisputeContext {
 }
 
 export interface JudgeVerdict {
-  winner: string;      // client or freelancer address
-  reasoning: string;   // full text reasoning
-  confidence: number;  // 0.0 – 1.0
+  winner: string; // client or freelancer address
+  reasoning: string; // full text reasoning
+  confidence: number; // 0.0 – 1.0
 }
 ```
 
@@ -490,5 +477,4 @@ The orchestrator handles everything after `evaluate` returns — salt generation
 - **Pipeline phase**: Off-chain state marker on a dispute row indicating which step of the orchestrator is in flight; used for crash recovery.
 - **Dead-letter event**: An on-chain event whose handler threw an exception. Persisted for replay instead of being lost.
 - **Idempotency key**: Deterministic hash of (recipient, event type, canonical metadata) used to de-duplicate notifications.
-- **Minitia**: An Initia-launched EVM rollup. Prester's Phase 3 target.
 - **SIWE**: Sign-In with Ethereum. The EIP-4361 authentication flow where a user signs a human-readable message instead of submitting a password.

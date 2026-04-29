@@ -2,7 +2,7 @@
 
 Decentralized freelance marketplace with AI-judge dispute resolution. Milestone escrow on-chain, three-judge commit–reveal arbitration, multi-chain.
 
-[Full project description](DESCRIPTION.md) · [Architecture & whitepaper](ARCHITECTURE.md)
+[Full project description](DESCRIPTION.md) · [Architecture & whitepaper](ARCHITECTURE.md) · [Contribute to Prester](CONTRIBUTING.md)
 
 ---
 
@@ -37,7 +37,7 @@ Each subproject has its own `package.json` and runs independently.
 - **Node.js** ≥ 20.x (tested on 20.11, 22.x)
 - **PostgreSQL** ≥ 14 (local or Supabase/Neon/RDS)
 - **npm** ≥ 10
-- **An EVM wallet with testnet funds** for deploying contracts and signing judge verdicts (MetaMask + Sepolia / Celo Alfajores / Base Sepolia faucets)
+- **An EVM wallet with testnet funds** for deploying contracts and signing judge verdicts (EVM Compatible Wallet + Sepolia / Celo Alfajores / Base Sepolia faucets)
 - **API keys**:
   - [Pinata](https://pinata.cloud) (IPFS pinning)
   - [Anthropic](https://console.anthropic.com) (Claude judge)
@@ -265,7 +265,7 @@ Full architecture and protocol spec in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Troubleshooting
 
-**"Failed to start server"** — Check `DATABASE_URL` reaches Postgres, JWT_SECRET is set, and at least one `CHAIN_N_*` block is configured.
+**"Failed to start server"** — Check `DATABASE_URL` reaches Postgres, JWT*SECRET is set, and at least one `CHAIN_N*\*` block is configured.
 
 **Migrations error "relation already exists"** — Your schema is partially applied but `_migrations` is empty. Manually `INSERT INTO _migrations (filename) VALUES ('001_initial.sql'), …` for each migration already present, then re-run `npm run migrate`.
 
