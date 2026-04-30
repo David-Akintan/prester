@@ -122,7 +122,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-[var(--color-border-subtle)] bg-surface/70 backdrop-blur-xl animate-slide-down">
+      <header className="sticky top-0 z-[100] border-b border-[var(--color-border-subtle)] bg-surface/70 backdrop-blur-xl animate-slide-down">
         <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           {/* Logo */}
           <Link
@@ -315,7 +315,7 @@ export default function Navbar() {
 
       {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 z-40 animate-fade-in">
+        <div className="md:hidden fixed inset-0 z-[110] animate-fade-in">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
@@ -701,7 +701,11 @@ function WalletPill({
       {open && (
         <div
           role="menu"
-          className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-[var(--color-border-subtle)] bg-surface/95 backdrop-blur-xl shadow-2xl z-50 p-3 animate-fade-in flex flex-col gap-3"
+          /* `fixed` puts the dropdown in the viewport root stacking context so
+             no page element can paint above it. Anchored flush to the right
+             edge (right-0) and immediately under the navbar (top-14) for an
+             unfloated, screen-anchored feel. */
+          className="fixed top-14 right-0 w-72 max-w-[calc(100vw-1rem)] rounded-2xl rounded-tr-none border border-[var(--color-border-subtle)] bg-surface/95 backdrop-blur-xl shadow-2xl z-[120] p-3 animate-dropdown-in flex flex-col gap-3"
         >
           {/* Address row */}
           <div className="flex items-center justify-between gap-2">
@@ -868,7 +872,7 @@ function NotificationsDropdown({
   onClose: () => void;
 }) {
   return (
-    <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1rem)] rounded-2xl border border-[var(--color-border-subtle)] bg-surface/95 backdrop-blur-xl shadow-2xl z-50 overflow-hidden animate-fade-in">
+    <div className="fixed top-14 right-0 w-80 max-w-[calc(100vw-1rem)] rounded-2xl rounded-tr-none border border-[var(--color-border-subtle)] bg-surface/95 backdrop-blur-xl shadow-2xl z-[120] overflow-hidden animate-dropdown-in">
       <div className="border-b border-[var(--color-border-subtle)] px-4 py-3 flex items-center justify-between bg-muted/40">
         <span className="text-xs font-semibold uppercase tracking-wider text-fg">
           Notifications

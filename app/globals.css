@@ -33,6 +33,11 @@
   --color-warning-foreground: var(--color-white);
 
   /* Background & Surface */
+  /* Internal alias tokens consumed by `@theme inline` below — naming them
+     differently from --color-background / --color-foreground breaks the
+     self-reference cycle Tailwind v4 would otherwise auto-generate. */
+  --bg-source: var(--color-white);
+  --fg-source: var(--color-black);
   --color-background: var(--color-white);
   --color-foreground: var(--color-black);
   --color-surface: var(--color-white);
@@ -93,6 +98,8 @@
 
 /* ===== DARK MODE TOKENS ===== */
 [data-theme="dark"] {
+  --bg-source: #0a0a0a;
+  --fg-source: #fafafa;
   --color-background: #0a0a0a;
   --color-foreground: #fafafa;
   --color-surface: #111111;
@@ -349,10 +356,16 @@
   color: #fcd34d !important;
 }
 
-/* ===== THEME INLINE CONFIGURATION ===== */
+/* ===== THEME INLINE CONFIGURATION =====
+   Point Tailwind's --color-background / --color-foreground at internal alias
+   tokens (--bg-source / --fg-source) instead of letting it auto-register
+   them. Auto-registration emits `--color-background: var(--color-background)`
+   (a self-reference) inside `@layer theme`, which invalidates the variable
+   and silently makes every `text-[var(--color-background)]` resolve to
+   inherited color — that's the "black-on-black" bug. */
 @theme inline {
-  --color-background: var(--color-background);
-  --color-foreground: var(--color-foreground);
+  --color-background: var(--bg-source);
+  --color-foreground: var(--fg-source);
   --font-sans: var(--font-family-sans);
   --font-mono: var(--font-family-mono);
 }
@@ -687,6 +700,23 @@ button:disabled {
   animation: fadeIn 0.6s ease-out;
 }
 
+/* Snappy dropdown/popover entrance — short duration, ease-in so the menu
+   reads as immediately-responsive when triggered by a deliberate click. */
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-dropdown-in {
+  animation: dropdownIn 140ms ease-in;
+  transform-origin: top right;
+}
+
 .animate-fade-in-up {
   animation: fadeInUp 0.6s ease-out;
 }
@@ -940,108 +970,99 @@ body {
   text-decoration-color: var(--color-foreground);
 }
 
-/* ===== ANIMATED BACKGROUND =====
-   Used by <AnimatedBackground /> mounted in ClientLayout. Renders a faint
-   grid plus three slowly drifting monochrome orbs. Colors come from theme
-   tokens so dark mode flips naturally. */
+/* ===== AMBIENT BACKGROUND =====
+   Refined three-layer composition rendered by <AnimatedBackground />:
+     1. .bg-spotlight — soft directional glow at the top center for depth
+     2. .bg-grain    — fine theme-aware dot stipple, the tactile foundation
+     3. .bg-noise    — SVG fractalNoise overlay for crisp film-grain texture
+   Colors come from --color-foreground so dark mode flips automatically. */
 
-.bg-grid {
+/* Soft directional spotlight — single subtle highlight from the top center
+   creates a sense of light source without the distracting drift of orbs. */
+.bg-spotlight {
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 50% 0%,
+      color-mix(in srgb, var(--color-foreground) 7%, transparent) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 50% 40% at 80% 100%,
+      color-mix(in srgb, var(--color-foreground) 4%, transparent) 0%,
+      transparent 70%
+    );
+}
+
+[data-theme="dark"] .bg-spotlight {
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 50% 0%,
+      color-mix(in srgb, var(--color-foreground) 11%, transparent) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 50% 40% at 80% 100%,
+      color-mix(in srgb, var(--color-foreground) 7%, transparent) 0%,
+      transparent 70%
+    );
+}
+
+/* Fine dot grain — tighter spacing than a grid so it reads as stippled
+   texture rather than structured rows. Two offset layers at different sizes
+   give a stochastic feel (avoiding the perfectly-uniform pattern look). */
+.bg-grain {
   background-image:
-    linear-gradient(to right, var(--color-foreground) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--color-foreground) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+    radial-gradient(
+      circle at 1px 1px,
+      color-mix(in srgb, var(--color-foreground) 32%, transparent) 1px,
+      transparent 1.4px
+    ),
+    radial-gradient(
+      circle at 1px 1px,
+      color-mix(in srgb, var(--color-foreground) 18%, transparent) 0.5px,
+      transparent 1px
+    );
+  background-size:
+    22px 22px,
+    13px 13px;
+  background-position:
+    0 0,
+    7px 11px;
+  mask-image: radial-gradient(
+    ellipse 95% 75% at 50% 30%,
+    black 0%,
+    transparent 90%
+  );
   -webkit-mask-image: radial-gradient(
-    ellipse at center,
-    black 30%,
-    transparent 75%
+    ellipse 95% 75% at 50% 30%,
+    black 0%,
+    transparent 90%
   );
 }
 
-.bg-orb {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(80px);
-  opacity: 0.35;
-  will-change: transform;
+[data-theme="dark"] .bg-grain {
+  background-image:
+    radial-gradient(
+      circle at 1px 1px,
+      color-mix(in srgb, var(--color-foreground) 45%, transparent) 1px,
+      transparent 1.4px
+    ),
+    radial-gradient(
+      circle at 1px 1px,
+      color-mix(in srgb, var(--color-foreground) 26%, transparent) 0.5px,
+      transparent 1px
+    );
 }
 
-[data-theme="dark"] .bg-orb {
-  opacity: 0.22;
+/* SVG turbulence noise — adds a faint film-grain crispness without weight.
+   stitchTiles="stitch" prevents seams when the SVG tiles. */
+.bg-noise {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: 0.04;
 }
 
-.bg-orb-a {
-  width: 520px;
-  height: 520px;
-  top: -10%;
-  left: -8%;
-  background: radial-gradient(
-    circle,
-    var(--color-foreground) 0%,
-    transparent 65%
-  );
-  animation: drift-a 22s ease-in-out infinite;
-}
-
-.bg-orb-b {
-  width: 620px;
-  height: 620px;
-  bottom: -15%;
-  right: -10%;
-  background: radial-gradient(
-    circle,
-    var(--color-foreground) 0%,
-    transparent 65%
-  );
-  animation: drift-b 28s ease-in-out infinite;
-}
-
-.bg-orb-c {
-  width: 420px;
-  height: 420px;
-  top: 35%;
-  left: 45%;
-  background: radial-gradient(
-    circle,
-    var(--color-foreground) 0%,
-    transparent 70%
-  );
-  opacity: 0.18;
-  animation: drift-c 34s ease-in-out infinite;
-}
-
-[data-theme="dark"] .bg-orb-c {
-  opacity: 0.12;
-}
-
-@keyframes drift-a {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(80px, 60px, 0) scale(1.1);
-  }
-}
-
-@keyframes drift-b {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-100px, -70px, 0) scale(1.15);
-  }
-}
-
-@keyframes drift-c {
-  0%,
-  100% {
-    transform: translate3d(-50%, -50%, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-40%, -60%, 0) scale(1.2);
-  }
+[data-theme="dark"] .bg-noise {
+  opacity: 0.07;
 }
 
 /* Respect users who opt out of motion. Disable Tailwind/utility-driven

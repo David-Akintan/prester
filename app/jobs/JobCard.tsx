@@ -23,17 +23,17 @@ export function JobCard({ job, className }: JobCardProps) {
     <Link href={`/jobs/${job.id}`} className="job-card-link">
       <article
         className={cn(
-          "group border border-gray-300 bg-white transition-all duration-300 animate-fade-in-up rounded-xl h-full flex flex-col",
-          "hover:border-black hover:shadow-xl hover:-translate-y-1",
-          "focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2",
+          "group border border-default bg-surface/80 backdrop-blur-sm transition-all duration-300 animate-fade-in-up rounded-2xl h-full flex flex-col",
+          "hover:border-[var(--color-foreground)] hover:shadow-xl hover:-translate-y-1",
+          "focus:outline-none focus:ring-2 focus:ring-[var(--color-foreground)] focus:ring-offset-2",
           className,
         )}
       >
         {/* Card Content */}
-        <div className="flex flex-col h-full p-6">
+        <div className="flex flex-col h-full p-5 sm:p-6">
           {/* Top row - Title and Status */}
           <div className="mb-4 flex items-start justify-between gap-3">
-            <h3 className="text-lg font-semibold text-black group-hover:text-black line-clamp-2 transition-colors animate-slide-up flex-1 pr-2 leading-tight">
+            <h3 className="text-base sm:text-lg font-semibold text-fg line-clamp-2 transition-colors animate-slide-up flex-1 leading-tight min-w-0">
               {job.title}
             </h3>
             <div className="flex flex-col items-end gap-1.5 animate-scale-in animation-delay-200 shrink-0">
@@ -50,96 +50,83 @@ export function JobCard({ job, className }: JobCardProps) {
             </div>
           </div>
 
-          {/* Description - Better height control */}
+          {/* Description */}
           <div className="mb-4 min-h-[4rem]">
-            <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed animate-slide-up animation-delay-300">
+            <p className="text-sm text-muted line-clamp-3 leading-relaxed animate-slide-up animation-delay-300">
               {job.description}
             </p>
           </div>
 
-          {/* Tags - Better height control */}
-          <div className="mb-4 min-h-[2rem] flex flex-wrap gap-2 animate-slide-up animation-delay-400">
+          {/* Tags */}
+          <div className="mb-4 min-h-[2rem] flex flex-wrap gap-1.5 animate-slide-up animation-delay-400">
             {job.required_skills?.length > 0 ? (
               <>
                 {job.required_skills.slice(0, 3).map((skill, index) => (
                   <span
                     key={skill}
-                    className="border border-gray-300 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-600 uppercase tracking-wide animate-scale-in hover:border-black hover:bg-black hover:text-white transition-all rounded-lg"
+                    className="rounded-full border border-default bg-muted/40 px-2.5 py-0.5 text-[11px] font-medium text-muted hover:border-[var(--color-foreground)] hover:text-fg transition-all animate-scale-in truncate max-w-[140px]"
                     style={{ animationDelay: `${400 + index * 100}ms` }}
                   >
                     {skill}
                   </span>
                 ))}
                 {job.required_skills.length > 3 && (
-                  <span className="border border-gray-300 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-400 uppercase tracking-wide animate-scale-in rounded-lg">
+                  <span className="rounded-full border border-default bg-muted/40 px-2.5 py-0.5 text-[11px] font-medium text-muted animate-scale-in">
                     +{job.required_skills.length - 3}
                   </span>
                 )}
               </>
             ) : (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">
-                  No specific skills required
-                </span>
-              </div>
+              <span className="text-xs text-muted">
+                No specific skills required
+              </span>
             )}
           </div>
 
-          {/* Spacer to push footer to bottom */}
+          {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Footer - Always at bottom */}
-          <div className="flex flex-col gap-3 border-t border-gray-300 pt-4 animate-slide-up animation-delay-500">
-            {/* Payment and stats row - Better spacing */}
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 flex-wrap">
-                {/* Payment */}
-                <div className="flex items-center gap-1.5 group/payment">
-                  <span className="text-xs font-mono text-gray-400 uppercase tracking-wider group-hover/payment:text-black transition-colors">
-                    Total
-                  </span>
-                  <span className="text-lg font-bold text-black group-hover/payment:scale-105 transition-transform">
-                    {totalEth} {nativeSymbol}
-                  </span>
-                </div>
-
-                <div className="h-4 w-px bg-gray-300" />
-
-                {/* Milestone count */}
-                <div className="flex items-center gap-1">
-                  <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">
-                    {job.milestones?.length ?? 0}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    milestone{job.milestones?.length !== 1 ? "s" : ""}
-                  </span>
-                </div>
-
-                {/* Bid count */}
-                {job.status === "open" && job.bids && (
-                  <>
-                    <div className="h-4 w-px bg-gray-300" />
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs font-mono text-gray-400 uppercase tracking-wider">
-                        {job.bids.length}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        bid{job.bids.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
+          {/* Footer */}
+          <div className="flex flex-col gap-3 border-t border-default pt-4 animate-slide-up animation-delay-500">
+            {/* Payment row — payment isolated and prominent on its own line */}
+            <div className="flex items-baseline gap-1.5 min-w-0">
+              <span className="text-[10px] font-mono text-muted uppercase tracking-widest shrink-0">
+                Total
+              </span>
+              <span className="text-base sm:text-lg font-bold text-fg tabular-nums truncate">
+                {totalEth} {nativeSymbol}
+              </span>
             </div>
 
-            {/* Duration and date row - Better spacing */}
-            <div className="flex items-center justify-between text-xs text-gray-400 gap-4">
-              <div className="flex items-center gap-2">
-                {job.estimated_duration && (
-                  <span className="font-medium">{job.estimated_duration}</span>
-                )}
-              </div>
-              <span>{postedAt}</span>
+            {/* Stats chips — wrap freely on narrow widths */}
+            <div className="flex items-center gap-x-3 gap-y-1 flex-wrap text-[11px] text-muted">
+              <span className="inline-flex items-center gap-1">
+                <span className="font-mono tabular-nums text-fg">
+                  {job.milestones?.length ?? 0}
+                </span>
+                milestone{job.milestones?.length !== 1 ? "s" : ""}
+              </span>
+              {job.status === "open" && job.bids && (
+                <>
+                  <span aria-hidden="true" className="opacity-40">·</span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="font-mono tabular-nums text-fg">
+                      {job.bids.length}
+                    </span>
+                    bid{job.bids.length !== 1 ? "s" : ""}
+                  </span>
+                </>
+              )}
+              {job.estimated_duration && (
+                <>
+                  <span aria-hidden="true" className="opacity-40">·</span>
+                  <span className="font-medium truncate">
+                    {job.estimated_duration}
+                  </span>
+                </>
+              )}
+              <span aria-hidden="true" className="opacity-40">·</span>
+              <span className="ml-auto whitespace-nowrap">{postedAt}</span>
             </div>
           </div>
         </div>
