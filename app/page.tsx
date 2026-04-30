@@ -3,6 +3,13 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { jobsApi } from "@/lib/api";
+import { fetchJobCountAcrossChains } from "@/lib/contracts";
+
+// "Jobs Posted" is summed from the FreelanceEscrow contract's `jobCount` on
+// every configured chain — the chain is the source of truth. DB rows can be
+// deleted; on-chain jobCount cannot. Active/Completed still come from the
+// indexer because the contract doesn't expose status counters; if every
+// chain read fails we fall back to the DB total so the hero never reads zero.
 
 function useLiveStats() {
   const [stats, setStats] = useState({
@@ -15,14 +22,24 @@ function useLiveStats() {
   useEffect(() => {
     async function fetch() {
       try {
-        const [all, completed] = await Promise.all([
+        const [chainAgg, dbAll, dbCompleted] = await Promise.all([
+          fetchJobCountAcrossChains().catch(() => null),
           jobsApi.list({ limit: 1 }),
           jobsApi.list({ status: "completed", limit: 1 }),
         ]);
+        const everyChainFailed =
+          chainAgg != null &&
+          chainAgg.failedChains.length > 0 &&
+          Object.keys(chainAgg.perChain).length === 0;
+        const total =
+          chainAgg && !everyChainFailed
+            ? Number(chainAgg.total)
+            : dbAll.total;
+        const completedJobs = Math.min(dbCompleted.total, total);
         setStats({
-          totalJobs: all.total,
-          activeJobs: all.total - completed.total,
-          completedJobs: completed.total,
+          totalJobs: total,
+          activeJobs: Math.max(0, total - completedJobs),
+          completedJobs,
           loading: false,
         });
       } catch {

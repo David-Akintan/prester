@@ -1,12 +1,8 @@
 import { ethers, BrowserProvider, JsonRpcSigner } from "ethers";
 import FreelanceEscrowABI from "./abis/FreelanceEscrow.json";
-import { getContractAddresses } from "./addresses";
+import { CONTRACT_ADDRESSES_BY_CHAIN, getContractAddresses } from "./addresses";
 import { CHAIN_REGISTRY, DEFAULT_CHAIN_ID } from "./chains";
 import type { Job, Milestone, JobStatus, MilestoneStatus } from "@/index";
-
-// ─────────────────────────────────────────────────────────────
-// Provider helpers
-// ─────────────────────────────────────────────────────────────
 
 function rpcFor(chainId: number): string {
   const meta = CHAIN_REGISTRY[chainId];
@@ -16,21 +12,11 @@ function rpcFor(chainId: number): string {
   return meta.viemChain.rpcUrls.default.http[0];
 }
 
-/**
- * Returns a read-only provider for a given chain.
- * Falls back to DEFAULT_CHAIN_ID when called without arguments so
- * server-side / pre-wallet reads still work.
- */
 export function getReadProvider(chainId?: number): ethers.JsonRpcProvider {
   const id = chainId ?? DEFAULT_CHAIN_ID;
   return new ethers.JsonRpcProvider(rpcFor(id));
 }
 
-/**
- * Returns a BrowserProvider wrapping the injected wallet (window.ethereum).
- * Works with MetaMask and any EIP-1193 compatible browser wallet.
- * Throws if no wallet is available.
- */
 export function getWalletProvider(): BrowserProvider {
   if (typeof window === "undefined" || !window.ethereum) {
     throw new Error(
@@ -40,15 +26,6 @@ export function getWalletProvider(): BrowserProvider {
   return new BrowserProvider(window.ethereum as ethers.Eip1193Provider);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Contract instances
-// ─────────────────────────────────────────────────────────────
-
-/**
- * Read-only (or signer-bound) escrow contract instance for a given chain.
- * When a signer is passed the chain is inferred from the signer's provider
- * so writes always go to the chain the wallet is on.
- */
 export function getEscrowContract(
   signerOrProvider?: ethers.Signer | ethers.Provider,
   chainId?: number,
@@ -117,7 +94,10 @@ export async function fetchJob(jobId: bigint, chainId?: number): Promise<Job> {
   };
 }
 /** Fetch multiple jobs by IDs */
-export async function fetchJobs(ids: bigint[], chainId?: number): Promise<Job[]> {
+export async function fetchJobs(
+  ids: bigint[],
+  chainId?: number,
+): Promise<Job[]> {
   return Promise.all(ids.map((id) => fetchJob(id, chainId)));
 }
 
@@ -125,6 +105,35 @@ export async function fetchJobs(ids: bigint[], chainId?: number): Promise<Job[]>
 export async function fetchJobCount(chainId?: number): Promise<bigint> {
   const contract = getEscrowContract(undefined, chainId);
   return contract.jobCount() as Promise<bigint>;
+}
+
+export async function fetchJobCountAcrossChains(): Promise<{
+  total: bigint;
+  perChain: Record<number, bigint>;
+  failedChains: number[];
+}> {
+  const chainIds = Object.keys(CONTRACT_ADDRESSES_BY_CHAIN).map(Number);
+  const results = await Promise.all(
+    chainIds.map(async (id) => {
+      try {
+        return { id, count: await fetchJobCount(id) };
+      } catch {
+        return { id, count: null as bigint | null };
+      }
+    }),
+  );
+  const perChain: Record<number, bigint> = {};
+  const failedChains: number[] = [];
+  let total = 0n;
+  for (const { id, count } of results) {
+    if (count == null) {
+      failedChains.push(id);
+    } else {
+      perChain[id] = count;
+      total += count;
+    }
+  }
+  return { total, perChain, failedChains };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -269,11 +278,6 @@ export async function cancelJob(
   return tx.wait();
 }
 
-/**
- * Read the FreelanceEscrow's `owner()` for a given chain. Used by the admin
- * needs-review page to gate UI to the contract owner only. Cheap because
- * read-only.
- */
 export async function getEscrowOwner(chainId: number): Promise<string> {
   const contract = getEscrowContract(undefined, chainId);
   return (await contract.owner()) as string;
@@ -281,12 +285,6 @@ export async function getEscrowOwner(chainId: number): Promise<string> {
 
 /**
  * Owner-only escape hatch for disputes that escalated to NeedsReview.
- * Wraps `FreelanceEscrow.emergencyResolveDispute(jobId, milestoneIndex, winner)`
- * so the admin UI can fire it from the connected wallet.
- *
- * The corresponding `EmergencyResolved` event is consumed by the backend
- * chain listener, which resolves the dispute and milestone rows + sends
- * notifications to both parties.
  */
 export async function emergencyResolveDispute(
   signer: JsonRpcSigner,

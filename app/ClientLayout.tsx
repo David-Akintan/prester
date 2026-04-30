@@ -4,6 +4,7 @@ import { WalletProvider } from "@/app/components/wallet/WalletContext";
 import { ThemeProvider } from "@/app/components/theme/ThemeProvider";
 import Navbar from "@/app/components/layout/Navbar";
 import Footer from "@/app/components/layout/Footer";
+import AnimatedBackground from "@/app/components/layout/AnimatedBackground";
 
 export default function ClientLayout({
   children,
@@ -13,6 +14,7 @@ export default function ClientLayout({
   return (
     <ThemeProvider>
       <WalletProvider>
+        <AnimatedBackground />
         {/* <a href="#main-content" className="skip-link">
           Skip to content
         </a> */}

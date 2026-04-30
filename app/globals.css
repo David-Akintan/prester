@@ -369,8 +369,12 @@ html {
   text-size-adjust: 100%;
 }
 
-body {
+html {
   background-color: var(--color-background);
+}
+
+body {
+  background-color: transparent;
   color: var(--color-foreground);
   font-family: var(--font-family-sans);
   font-feature-settings:
@@ -901,9 +905,10 @@ button:disabled {
   border-color: var(--color-border-subtle);
 }
 
-/* Body always follows tokens */
+/* Body stays transparent so the fixed AnimatedBackground layer (z-index: -10)
+   remains visible. The page background color is on <html> instead. */
 body {
-  background-color: var(--color-background);
+  background-color: transparent;
   color: var(--color-foreground);
 }
 
@@ -933,6 +938,110 @@ body {
   color: var(--color-foreground);
   text-decoration: underline;
   text-decoration-color: var(--color-foreground);
+}
+
+/* ===== ANIMATED BACKGROUND =====
+   Used by <AnimatedBackground /> mounted in ClientLayout. Renders a faint
+   grid plus three slowly drifting monochrome orbs. Colors come from theme
+   tokens so dark mode flips naturally. */
+
+.bg-grid {
+  background-image:
+    linear-gradient(to right, var(--color-foreground) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-foreground) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(
+    ellipse at center,
+    black 30%,
+    transparent 75%
+  );
+}
+
+.bg-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.35;
+  will-change: transform;
+}
+
+[data-theme="dark"] .bg-orb {
+  opacity: 0.22;
+}
+
+.bg-orb-a {
+  width: 520px;
+  height: 520px;
+  top: -10%;
+  left: -8%;
+  background: radial-gradient(
+    circle,
+    var(--color-foreground) 0%,
+    transparent 65%
+  );
+  animation: drift-a 22s ease-in-out infinite;
+}
+
+.bg-orb-b {
+  width: 620px;
+  height: 620px;
+  bottom: -15%;
+  right: -10%;
+  background: radial-gradient(
+    circle,
+    var(--color-foreground) 0%,
+    transparent 65%
+  );
+  animation: drift-b 28s ease-in-out infinite;
+}
+
+.bg-orb-c {
+  width: 420px;
+  height: 420px;
+  top: 35%;
+  left: 45%;
+  background: radial-gradient(
+    circle,
+    var(--color-foreground) 0%,
+    transparent 70%
+  );
+  opacity: 0.18;
+  animation: drift-c 34s ease-in-out infinite;
+}
+
+[data-theme="dark"] .bg-orb-c {
+  opacity: 0.12;
+}
+
+@keyframes drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(80px, 60px, 0) scale(1.1);
+  }
+}
+
+@keyframes drift-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-100px, -70px, 0) scale(1.15);
+  }
+}
+
+@keyframes drift-c {
+  0%,
+  100% {
+    transform: translate3d(-50%, -50%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-40%, -60%, 0) scale(1.2);
+  }
 }
 
 /* Respect users who opt out of motion. Disable Tailwind/utility-driven
