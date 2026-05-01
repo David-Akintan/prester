@@ -9,6 +9,7 @@ import {
 } from "@/app/components/wallet/WalletContext";
 import { shortenAddress, cn } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useChatUnread } from "@/hooks/useChatUnread";
 import { useEffect, useRef, useState } from "react";
 import { ThemeToggle } from "@/app/components/theme/ThemeToggle";
 import ChainSwitcher from "@/app/components/layout/ChainSwitcher";
@@ -56,6 +57,7 @@ export default function Navbar() {
 
   const { notifications, unread, markAllRead } =
     useNotifications(isAuthenticated);
+  const { totalUnread: chatUnread } = useChatUnread(isAuthenticated);
   const [showNotifs, setShowNotifs] = useState(false);
   const [showWallet, setShowWallet] = useState(false);
   const [showMore, setShowMore] = useState(false);
@@ -179,6 +181,31 @@ export default function Navbar() {
 
             {/* Theme toggle — always visible */}
             <ThemeToggle />
+
+            {/* Messages — visible on all breakpoints when authenticated */}
+            {isConnected && isAuthenticated && (
+              <Link
+                href="/messages"
+                aria-label={
+                  chatUnread > 0
+                    ? `Messages (${chatUnread} unread)`
+                    : "Messages"
+                }
+                className={cn(
+                  "relative inline-flex h-9 w-9 items-center justify-center rounded-full border bg-surface text-fg transition-all hover:border-[var(--color-foreground)] hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-foreground)] focus-visible:ring-offset-2",
+                  pathname.startsWith("/messages")
+                    ? "border-[var(--color-foreground)]"
+                    : "border-default",
+                )}
+              >
+                <ChatIcon />
+                {chatUnread > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[var(--color-foreground)] px-1 text-[10px] font-bold text-[var(--color-background)]">
+                    {chatUnread > 9 ? "9+" : chatUnread}
+                  </span>
+                )}
+              </Link>
+            )}
 
             {/* Notifications bell — visible on all breakpoints when authenticated */}
             {isConnected && isAuthenticated && (
@@ -329,7 +356,7 @@ export default function Navbar() {
             style={{ paddingBottom: "calc(1.5rem + var(--safe-bottom))" }}
           >
             <nav className="flex flex-col gap-1">
-              {allLinks.map((link) => (
+              {[{ href: "/messages", label: "Messages" }, ...allLinks].map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -341,7 +368,14 @@ export default function Navbar() {
                       : "text-fg hover:bg-muted",
                   )}
                 >
-                  <span>{link.label}</span>
+                  <span className="flex items-center gap-2">
+                    {link.label}
+                    {link.href === "/messages" && chatUnread > 0 && (
+                      <span className="inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[var(--color-foreground)] px-1 text-[10px] font-bold text-[var(--color-background)]">
+                        {chatUnread > 9 ? "9+" : chatUnread}
+                      </span>
+                    )}
+                  </span>
                   <svg
                     className="h-4 w-4 opacity-60"
                     fill="none"
@@ -843,6 +877,7 @@ function NotificationsList({
                   job_cancelled: "❌",
                   job_completed: "🎉",
                   rekey_needed: "🔓",
+                  message_received: "💬",
                 }[n.type] ?? "🔔"}
               </span>
               <div className="flex-1 min-w-0">
@@ -903,6 +938,25 @@ function BellIcon() {
         strokeLinejoin="round"
         strokeWidth={2}
         d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+      />
+    </svg>
+  );
+}
+
+function ChatIcon() {
+  return (
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.96 9.96 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
       />
     </svg>
   );

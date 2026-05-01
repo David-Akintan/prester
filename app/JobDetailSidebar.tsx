@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatEth, shortenAddress } from "@/lib/utils";
 import { getNativeSymbol } from "@/lib/chains";
@@ -10,6 +11,7 @@ import { BidModal } from "@/app/jobs/BidModal";
 import { jobsApi, ApiError, type BidRecord } from "@/lib/api";
 import { cancelJob } from "@/lib/contracts";
 import { parseContractError } from "@/lib/utils";
+import { useChatUnread } from "@/hooks/useChatUnread";
 import type { JobRecord } from "@/lib/api";
 import type { JsonRpcSigner } from "ethers";
 
@@ -44,6 +46,14 @@ export function JobDetailSidebar({
   const totalEth = formatEth(BigInt(job.total_amount_wei));
   const nativeSymbol = getNativeSymbol(job.chain_id);
   const milestoneCount = job.milestones?.length ?? 0;
+
+  const { conversations } = useChatUnread(isAuthenticated);
+  const conversationForJob = conversations.find((c) => c.job_id === job.id);
+  const showMessagesLink =
+    role !== "visitor" &&
+    (job.status === "in_progress" ||
+      job.status === "completed" ||
+      job.status === "cancelled");
 
   const approvedCount =
     job.milestones?.filter(
@@ -332,6 +342,30 @@ export function JobDetailSidebar({
                 Archive Job
               </button>
             </div>
+          )}
+
+          {showMessagesLink && (
+            <Link
+              href={`/messages?job=${job.id}`}
+              className="mt-3 flex w-full items-center justify-between rounded-lg border border-default bg-surface px-4 py-2.5 text-sm font-medium text-fg transition-all hover:border-[var(--color-foreground)] hover:bg-[var(--color-foreground)] hover:text-[var(--color-background)]"
+            >
+              <span className="flex items-center gap-2">
+                <span aria-hidden="true">💬</span>
+                Open messages
+                {conversationForJob?.read_only && (
+                  <span className="text-xs uppercase tracking-wide opacity-70">
+                    (read-only)
+                  </span>
+                )}
+              </span>
+              {conversationForJob && conversationForJob.unread_count > 0 && (
+                <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--color-foreground)] px-1.5 text-[10px] font-bold text-[var(--color-background)]">
+                  {conversationForJob.unread_count > 99
+                    ? "99+"
+                    : conversationForJob.unread_count}
+                </span>
+              )}
+            </Link>
           )}
         </div>
 

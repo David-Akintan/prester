@@ -731,4 +731,119 @@ export const ipfsApi = {
       body: JSON.stringify({ content, type }),
     });
   },
+
+  // Binary file upload (chat attachments). Uses multipart/form-data so we
+  // pin the actual file via Pinata's pinFileToIPFS rather than wrapping a
+  // base64 blob in JSON.
+  async uploadFile(
+    file: File,
+  ): Promise<{ uri: string; name: string; mime: string; size: number }> {
+    const form = new FormData();
+    form.append("file", file);
+
+    const headers: Record<string, string> = {};
+    const token = getToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const res = await fetch(`${BASE_URL}/ipfs/upload-file`, {
+      method: "POST",
+      headers,
+      body: form,
+    });
+
+    if (!res.ok) {
+      let code = "UPLOAD_ERROR";
+      let message = `Upload failed (HTTP ${res.status}).`;
+      try {
+        const data = (await res.json()) as { error?: { code?: string; message?: string } };
+        if (data?.error) {
+          code = data.error.code ?? code;
+          message = data.error.message ?? message;
+        }
+      } catch {
+        // non-JSON error — keep defaults
+      }
+      if (res.status === 401) {
+        clearToken();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("auth:expired"));
+        }
+      }
+      throw new ApiError(res.status, code, message);
+    }
+
+    return res.json();
+  },
+};
+
+// ─── Messages (chat) ─────────────────────────────────────────
+
+export interface ConversationSummary {
+  job_id: string;
+  job_title: string;
+  job_status: "draft" | "open" | "in_progress" | "completed" | "cancelled";
+  client_address: string;
+  freelancer_address: string;
+  last_message_at: string;
+  last_preview: string | null;
+  last_kind: "user" | "system" | null;
+  unread_count: number;
+  read_only: boolean;
+}
+
+export interface MessageRow {
+  id: string;
+  conversation_id: string;
+  sender_address: string | null;
+  kind: "user" | "system";
+  body: string | null;
+  attachment_uri: string | null;
+  attachment_name: string | null;
+  attachment_mime: string | null;
+  system_event:
+    | "bid_accepted"
+    | "milestone_submitted"
+    | "milestone_approved"
+    | "dispute_raised"
+    | "verdict_executed"
+    | "job_cancelled"
+    | "emergency_resolved"
+    | null;
+  system_payload: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface SendMessagePayload {
+  text?: string;
+  attachment_uri?: string;
+  attachment_name?: string;
+  attachment_mime?: string;
+}
+
+export const messagesApi = {
+  listConversations(): Promise<{ conversations: ConversationSummary[] }> {
+    return apiFetch("/conversations");
+  },
+
+  listMessages(
+    jobId: string,
+    opts: { before?: string; limit?: number } = {},
+  ): Promise<{ messages: MessageRow[]; has_more: boolean }> {
+    const qs = new URLSearchParams();
+    if (opts.before) qs.set("before", opts.before);
+    if (opts.limit) qs.set("limit", String(opts.limit));
+    const tail = qs.toString();
+    return apiFetch(`/conversations/${jobId}/messages${tail ? `?${tail}` : ""}`);
+  },
+
+  send(jobId: string, payload: SendMessagePayload): Promise<MessageRow> {
+    return apiFetch(`/conversations/${jobId}/messages`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  markRead(jobId: string): Promise<void> {
+    return apiFetch(`/conversations/${jobId}/read`, { method: "POST" });
+  },
 };
